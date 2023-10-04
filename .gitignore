@@ -39,3 +39,6 @@ luac.out
 *.x86_64
 *.hex
 
+# Experimental files, will remove main.lua when finished
+settings.txt
+main.lua
