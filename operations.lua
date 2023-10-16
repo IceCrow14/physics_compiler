@@ -2,9 +2,13 @@
 
 -- Description: performs geometry and processing operations
 
+-- For convenience, most of the math functions work in 3DS Max units unless otherwise specified; to convert -first order- results to Halo engine units use 'jms_units_to_world_units()'
+
 operations = {}
 
-function operations.get_node_parent_index(node, node_data_table)
+function operations.get_node_parent_index(node, node_data)
+	assert(type(node) == "number")
+	assert(type(node_data) == "table")
 	local lookup_node = node
 	local i = 0 -- Loop node
 	local i_first_child
@@ -13,8 +17,8 @@ function operations.get_node_parent_index(node, node_data_table)
 		return -1 -- No parent
 	end
 	repeat
-		i_first_child = node_data_table[i].first_child_index
-		i_next_sibling = node_data_table[i].next_sibling_index
+		i_first_child = node_data[i].first_child_index
+		i_next_sibling = node_data[i].next_sibling_index
 		if i_next_sibling == lookup_node then -- Is the previous sibling
 			lookup_node = i
 			i = -1 -- Reset loop and attempt to get the parent node with previous sibling
@@ -189,6 +193,80 @@ function operations.get_centroid_vector(mass_point_data, node_data) -- * This fu
 	return centroid
 end
 
+function operations.get_inertial_matrix(centroid_vector, total_mass, mass_point_data, node_data)
+	-- * Ignores density in mass point mass calculation (game engine density field is not linked to actual density)
+	-- * Returns values in ready-to-export Halo world units, no further processing is necessary
+	local inertial_matrix = {
+					    {0, 0, 0},
+					    {0, 0, 0},
+					    {0, 0, 0}
+				   }
+	local mass_point_relative_volumes = operations.get_mass_point_relative_volumes(mass_point_data)
+	for index, data in pairs(mass_point_data) do
+		local transformation_matrix = operations.get_mass_point_transformation_matrix(index, mass_point_data, node_data)
+		local translation = operations.new_vector(0, 0, 0)
+		local radius = operations.jms_units_to_world_units(data.radius)
+		local mass = mass_point_relative_volumes[index] * total_mass
+		local i_cm = (2/5) * mass * radius ^ 2 -- Inertia moment of a sphere at its center of mass
+		translation.x = operations.jms_units_to_world_units(transformation_matrix[1][4] - centroid_vector.x)
+		translation.y = operations.jms_units_to_world_units(transformation_matrix[2][4] - centroid_vector.y)
+		translation.z = operations.jms_units_to_world_units(transformation_matrix[3][4] - centroid_vector.z)		
+		inertial_matrix[1][1] = inertial_matrix[1][1] + (i_cm + mass * (translation.y ^ 2 + translation.z ^ 2)) -- i_xx. Adds the individual contributions of each mass sphere to the moments of inertia (i_aa) and products of inertia (i_ab or i_ba) based on the parallel axis theorem
+		inertial_matrix[2][2] = inertial_matrix[2][2] + (i_cm + mass * (translation.x ^ 2 + translation.z ^ 2)) -- i_yy
+		inertial_matrix[3][3] = inertial_matrix[3][3] + (i_cm + mass * (translation.x ^ 2 + translation.y ^ 2)) -- i_zz
+		inertial_matrix[1][2] = inertial_matrix[1][2] - (mass * translation.x * translation.y) -- i_xy. Signs of these products of inertia must be flipped to match the Halo engine frame of reference
+		inertial_matrix[1][3] = inertial_matrix[1][3] - (mass * translation.x * translation.z) -- i_xz
+		inertial_matrix[2][3] = inertial_matrix[2][3] - (mass * translation.y * translation.z) -- i_yz
+		inertial_matrix[2][1] = inertial_matrix[1][2] -- i_yx. These products of inertia are symmetric: i_ab = i_ba
+		inertial_matrix[3][1] = inertial_matrix[1][3] -- i_zx
+		inertial_matrix[3][2] = inertial_matrix[2][3] -- i_zy
+	end
+	return inertial_matrix
+end
+
+function operations.get_inverse_inertial_matrix(inertial_matrix)
+	local inverse_matrix = {
+						        {0, 0, 0},
+						        {0, 0, 0},
+						        {0, 0, 0}
+						   }
+	local determinant = 0
+	local rightwards = 0
+	local leftwards = 0
+	for i = 1, #inverse_matrix do
+		local product = 1
+		for j = 1, #inverse_matrix - 1 do
+			local row = j + 1
+			local column = i + j
+			column = column <= #inverse_matrix and column or (column - #inverse_matrix)
+			product = product * inertial_matrix[row][column]
+		end
+		rightwards = rightwards + inertial_matrix[1][i] * product
+	end
+	for i = #inverse_matrix, 1, -1 do
+		local product = 1
+		for j = 1, #inverse_matrix - 1 do
+			local row = j + 1
+			local column = i - j
+			column = column >= 1 and column or (#inverse_matrix + column)
+			product = product * inertial_matrix[row][column]
+		end
+		leftwards = leftwards - inertial_matrix[1][i] * product
+	end
+	determinant = determinant + rightwards + leftwards
+	for i = 1, #inverse_matrix do
+		for j = 1, #inverse_matrix do
+			local sign = math.mod(i, 2) == math.mod(j, 2) and 1 or -1
+			local rows = {1, 2, 3}
+			local columns = {1, 2, 3}
+			table.remove(rows, i)
+			table.remove(columns, j)
+			inverse_matrix[j][i] = sign * (inertial_matrix[rows[1]][columns[1]] * inertial_matrix[rows[2]][columns[2]] - inertial_matrix[rows[2]][columns[1]] * inertial_matrix[rows[1]][columns[2]]) / determinant
+		end
+	end
+	return inverse_matrix
+end
+
 function operations.jms_units_to_world_units(data)
 	assert(type(data) == "number" or type(data) == "table")
 	local world_units
@@ -203,53 +281,8 @@ function operations.jms_units_to_world_units(data)
 	end
 end
 
-function operations.print_object(object, indent) -- TODO: Debug function, remove on release
-	local indent_table = {}
-	for i = 1, indent do
-		table.insert(indent_table, "- ")
-	end
-	if type(object) == "table" then
-		print(table.concat(indent_table).."(table)")
-		for k, v in pairs(object) do
-			operations.print_object(v, indent + 1)
-		end
-	else
-		print(table.concat(indent_table)..type(object).." = "..object)
-	end
-end
-
 function operations.parse_powered_mass_points(mass_point_data) -- TODO: antigrav PMPs (wing tips, wing bodies, etc.) from the original vehicles are significantly harder, if not outright impossible to parse. I'll try to create a new naming convention for such PMPs
 	-- body
-end
-
-function operations.get_as_words(name)
-	assert(type(name) == "string")
-	local words = {}
-	local word_start
-	local word_end
-	for i = 1, #name do
-		if not word_start then
-			if string.sub(name, i, i) ~= " " then
-				word_start = i
-			end
-		else
-			if string.sub(name, i, i) == " " then
-				word_end = i - 1
-				table.insert(words, string.sub(name, word_start, word_end))
-				word_start = nil
-			elseif i == #name then
-				word_end = i
-				table.insert(words, string.sub(name, word_start, word_end))
-				word_start = nil
-			end
-		end
-	end
-	return words
-end
-
-function operations.is_pattern_match(word, pattern)
-	local word_base = string.sub(word, 1, #pattern)
-	return word_base == pattern
 end
 
 function operations.parse_tires(mass_point_data) -- Attempts to find a "[...] [front[#]/back[#]/axle[#]] [tire]" pattern and create PMPs for each front/back/axle set of tires
@@ -304,7 +337,7 @@ function operations.parse_tires(mass_point_data) -- Attempts to find a "[...] [f
 	return tires, pmps
 end
 
-function operations.parse_treads(mass_point_data) -- TODO
+function operations.parse_treads(mass_point_data) -- TODO: this, and also, parse 'feet' mass points as treads (pending to discuss)
 	-- body
 end
 
