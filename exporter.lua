@@ -120,16 +120,15 @@ function exporter.add_mass_points(settings_table, composed_relative_tag_path, ma
 
 end
 
+--[[ TODO: this might come in handy to handle nested fields in structs
 function exporter.get_child_keys(object, ...)
 	assert(
 		   #arg == 0 or
 		   (#arg == 1 and type(arg[1] == "string"))
 		  )
-
-
-
 	-- return
 end
+--]]
 
 -- TODO: plenty of export functions from the last prototype left to migrate here
 

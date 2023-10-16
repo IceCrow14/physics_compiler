@@ -178,7 +178,7 @@ function operations.get_centroid_vector(mass_point_data, node_data) -- * This fu
 													     mass_point_transformation_matrix[3][4] * mass_point_relative_volumes[index]
 													)
 
-		--[[ This yields the "unweighted" centroid, where all mass points are assumed of equal mass
+		--[[ DEBUG: This yields the "unweighted" centroid, where all mass points are assumed of equal mass
 		mass_point_influence = operations.new_vector(
 													     mass_point_transformation_matrix[1][4] * 1/(#mass_point_relative_volumes + 1), 
 													     mass_point_transformation_matrix[2][4] * 1/(#mass_point_relative_volumes + 1), 
@@ -195,7 +195,7 @@ end
 
 function operations.get_inertial_matrix(centroid_vector, total_mass, mass_point_data, node_data)
 	-- * Ignores density in mass point mass calculation (game engine density field is not linked to actual density)
-	-- * Returns values in ready-to-export Halo world units, no further processing is necessary
+	-- * Returns values in ready-to-export Halo world units (where applicable), no further processing is necessary
 	local inertial_matrix = {
 					    {0, 0, 0},
 					    {0, 0, 0},
@@ -281,11 +281,11 @@ function operations.jms_units_to_world_units(data)
 	end
 end
 
-function operations.parse_powered_mass_points(mass_point_data) -- TODO: antigrav PMPs (wing tips, wing bodies, etc.) from the original vehicles are significantly harder, if not outright impossible to parse. I'll try to create a new naming convention for such PMPs
+function operations.parse_powered_mass_points(mass_point_data) -- TODO: finish migrating this to 'parser' module. Antigrav PMPs (wing tips, wing bodies, etc.) from the original vehicles are significantly harder, if not outright impossible to parse. I'll try to create a new naming convention for such PMPs
 	-- body
 end
 
-function operations.parse_tires(mass_point_data) -- Attempts to find a "[...] [front[#]/back[#]/axle[#]] [tire]" pattern and create PMPs for each front/back/axle set of tires
+function operations.parse_tires(mass_point_data) -- TODO: finish migrating this to 'parser' module. Attempts to find a "[...] [front[#]/back[#]/axle[#]] [tire]" pattern and create PMPs for each front/back/axle set of tires
 	local tires = {}
 	local pmps = {}	
 	for index, data in pairs(mass_point_data) do
@@ -337,11 +337,11 @@ function operations.parse_tires(mass_point_data) -- Attempts to find a "[...] [f
 	return tires, pmps
 end
 
-function operations.parse_treads(mass_point_data) -- TODO: this, and also, parse 'feet' mass points as treads (pending to discuss)
+function operations.parse_treads(mass_point_data) -- TODO: finish migrating this to 'parser' module. This, and also, parse 'feet' mass points as treads (pending to discuss)
 	-- body
 end
 
-function operations.parse_antigrav(mass_point_data) -- TODO
+function operations.parse_antigrav(mass_point_data) -- TODO: finish migrating this to 'parser' module.
 	-- body
 end
 

@@ -9,10 +9,6 @@ parser = {}
 local exporter = require("exporter")
 local operations = require("operations")
 
-function parser.print_func()
-	print("AAAAAH")
-end
-
 function parser.print_object(object, ...) -- TODO: Debug function, remove on release
 	assert(
 		   #arg == 0 or 
@@ -160,31 +156,12 @@ function parser.get_engine_class_list()
 	return engine_class_list
 end
 
---[[
-function parser.new_engine(engine_class) -- Wait a minute...
-	local engine = 
-	assert(
-		   type(engine) == "table" and 
-		   type(engine.type) == "string" and 
-		   type(engine.variant) == "string" and 
-		   engine.type ~= "" and 
-		   engine.variant ~= ""
-		  )
-	--
-	--return engine
-end
---]]
-
-function parser.parse_tires(mass_point_data) -- TODO: also, consider merging this with other parse_[engine] functions into a single one
+function parser.parse_tires(mass_point_data) -- TODO: WIP, also, consider merging this with other parse_[engine] functions into a single one
 	local pmps = {}
 	local tires = {}
-
 	for index, data in pairs(mass_point_data) do
-
 		local mass_point_engine_class = parser.get_mass_point_engine_class(index, mass_point_data)
-
 	end
-
 end
 
 function parser.get_mass_point_engine_class(mass_point, mass_point_data)
