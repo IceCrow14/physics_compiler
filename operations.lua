@@ -4,7 +4,7 @@
 
 -- For convenience, most of the math functions work in 3DS Max units unless otherwise specified; to convert -first order- results to Halo engine units use 'jms_units_to_world_units()'
 
-operations = {}
+local operations = {}
 
 function operations.get_node_parent_index(node, node_data)
 	assert(type(node) == "number")
@@ -47,10 +47,10 @@ end
 
 function operations.new_rotation_matrix(quaternion)
 	local rotation_matrix = {
-								{0, 0, 0},
-								{0, 0, 0},
-								{0, 0, 0}
-							}
+	                         {0, 0, 0},
+	                         {0, 0, 0},
+	                         {0, 0, 0}
+	                        }
 	rotation_matrix[1][1] = quaternion.w ^ 2 + quaternion.x ^ 2 - quaternion.y ^ 2 - quaternion.z ^ 2 -- Alternatively: 1 - 2 * quaternion.y ^ 2 - 2 * quaternion.z ^ 2
 	rotation_matrix[1][2] = 2 * quaternion.x * quaternion.y - 2 * quaternion.w * quaternion.z
 	rotation_matrix[1][3] = 2 * quaternion.x * quaternion.z + 2 * quaternion.w * quaternion.y
@@ -65,11 +65,11 @@ end
 
 function operations.new_transformation_matrix(position_vector, rotation_matrix) -- Position and rotation can be obtained from a transformation matrix
 	local transformation_matrix = {
-									  {0, 0, 0, 0},
-									  {0, 0, 0, 0},
-									  {0, 0, 0, 0},
-									  {0, 0, 0, 0}
-								  }
+	                               {0, 0, 0, 0},
+	                               {0, 0, 0, 0},
+	                               {0, 0, 0, 0},
+	                               {0, 0, 0, 0}
+	                              }
 	transformation_matrix[1][4] = position_vector.x
 	transformation_matrix[2][4] = position_vector.y
 	transformation_matrix[3][4] = position_vector.z
@@ -86,11 +86,11 @@ end
 
 function operations.apply_transform(transformation_matrix_A, transformation_matrix_B) -- Applies transform B onto transformation matrix A (multiplies matrix A by matrix B)
 	local new_transformation_matrix = {
-								     {0, 0, 0, 0},
-								     {0, 0, 0, 0},
-								     {0, 0, 0, 0},
-								     {0, 0, 0, 0}
-								 }
+	                                   {0, 0, 0, 0},
+	                                   {0, 0, 0, 0},
+	                                   {0, 0, 0, 0},
+	                                   {0, 0, 0, 0}
+	                                  }
 	local element
 	for row = 1, 4 do
 		for column = 1, 4 do
@@ -109,16 +109,16 @@ function operations.get_node_transformation_matrix(node, node_data)
 	assert(type(node_data) == "table")
 	local parent = operations.get_node_parent_index(node, node_data)
 	local relative_translation_vector = operations.new_vector(
-													          node_data[node].relative_translation[1], 
-														      node_data[node].relative_translation[2], 
-														      node_data[node].relative_translation[3]
-														 )
+	                                                          node_data[node].relative_translation[1], 
+	                                                          node_data[node].relative_translation[2], 
+	                                                          node_data[node].relative_translation[3]
+	                                                         )
 	local relative_rotation_quaternion = operations.new_quaternion(
-															       -node_data[node].relative_rotation_quaternion[4], -- Sign inverted on "w" term to match the right-handed frame of reference of 3DS Max
-															       node_data[node].relative_rotation_quaternion[1], 
-															       node_data[node].relative_rotation_quaternion[2], 
-															       node_data[node].relative_rotation_quaternion[3]
-															  )
+	                                                               -node_data[node].relative_rotation_quaternion[4], -- Sign inverted on "w" term to match the right-handed frame of reference of 3DS Max
+	                                                               node_data[node].relative_rotation_quaternion[1], 
+	                                                               node_data[node].relative_rotation_quaternion[2], 
+	                                                               node_data[node].relative_rotation_quaternion[3]
+	                                                              )
 	local relative_rotation_matrix = operations.new_rotation_matrix(relative_rotation_quaternion)
 	local transformation_matrix = operations.new_transformation_matrix(relative_translation_vector, relative_rotation_matrix)
 	if parent == -1 then
@@ -134,16 +134,16 @@ function operations.get_mass_point_transformation_matrix(mass_point, mass_point_
 	local parent_node = mass_point_data[mass_point].parent_node
 	local parent_node_transformation_matrix = operations.get_node_transformation_matrix(parent_node, node_data)
 	local relative_translation_vector = operations.new_vector(
-														      mass_point_data[mass_point].relative_translation[1], 
-														      mass_point_data[mass_point].relative_translation[2], 
-														      mass_point_data[mass_point].relative_translation[3]
-														 )
+	                                                          mass_point_data[mass_point].relative_translation[1], 
+	                                                          mass_point_data[mass_point].relative_translation[2], 
+	                                                          mass_point_data[mass_point].relative_translation[3]
+	                                                         )
 	local relative_rotation_quaternion = operations.new_quaternion(
-															      -mass_point_data[mass_point].relative_rotation_quaternion[4], -- Sign inverted for "w" term to match the right-handed frame of reference of 3DS Max
-															      mass_point_data[mass_point].relative_rotation_quaternion[1], 
-															      mass_point_data[mass_point].relative_rotation_quaternion[2], 
-															      mass_point_data[mass_point].relative_rotation_quaternion[3]
-															 ) 
+	                                                               -mass_point_data[mass_point].relative_rotation_quaternion[4], -- Sign inverted for "w" term to match the right-handed frame of reference of 3DS Max
+	                                                               mass_point_data[mass_point].relative_rotation_quaternion[1], 
+	                                                               mass_point_data[mass_point].relative_rotation_quaternion[2], 
+	                                                               mass_point_data[mass_point].relative_rotation_quaternion[3]
+	                                                              )
 	local relative_rotation_matrix = operations.new_rotation_matrix(relative_rotation_quaternion)
 	local transformation_matrix = operations.new_transformation_matrix(relative_translation_vector, relative_rotation_matrix)
 	return operations.apply_transform(parent_node_transformation_matrix, transformation_matrix)
@@ -173,17 +173,17 @@ function operations.get_centroid_vector(mass_point_data, node_data) -- * This fu
 	for index, data in pairs(mass_point_data) do
 		mass_point_transformation_matrix = operations.get_mass_point_transformation_matrix(index, mass_point_data, node_data)
 		mass_point_influence = operations.new_vector(
-													     mass_point_transformation_matrix[1][4] * mass_point_relative_volumes[index], 
-													     mass_point_transformation_matrix[2][4] * mass_point_relative_volumes[index], 
-													     mass_point_transformation_matrix[3][4] * mass_point_relative_volumes[index]
-													)
+		                                             mass_point_transformation_matrix[1][4] * mass_point_relative_volumes[index], 
+		                                             mass_point_transformation_matrix[2][4] * mass_point_relative_volumes[index], 
+		                                             mass_point_transformation_matrix[3][4] * mass_point_relative_volumes[index]
+		                                            )
 
 		--[[ DEBUG: This yields the "unweighted" centroid, where all mass points are assumed of equal mass
 		mass_point_influence = operations.new_vector(
-													     mass_point_transformation_matrix[1][4] * 1/(#mass_point_relative_volumes + 1), 
-													     mass_point_transformation_matrix[2][4] * 1/(#mass_point_relative_volumes + 1), 
-													     mass_point_transformation_matrix[3][4] * 1/(#mass_point_relative_volumes + 1)
-													)
+		                                             mass_point_transformation_matrix[1][4] * 1/(#mass_point_relative_volumes + 1), 
+		                                             mass_point_transformation_matrix[2][4] * 1/(#mass_point_relative_volumes + 1), 
+		                                             mass_point_transformation_matrix[3][4] * 1/(#mass_point_relative_volumes + 1)
+		                                            )
 		--]]
 
 		centroid.x = centroid.x + mass_point_influence.x
@@ -197,10 +197,10 @@ function operations.get_inertial_matrix(centroid_vector, total_mass, mass_point_
 	-- * Ignores density in mass point mass calculation (game engine density field is not linked to actual density)
 	-- * Returns values in ready-to-export Halo world units (where applicable), no further processing is necessary
 	local inertial_matrix = {
-					    {0, 0, 0},
-					    {0, 0, 0},
-					    {0, 0, 0}
-				   }
+	                         {0, 0, 0},
+	                         {0, 0, 0},
+	                         {0, 0, 0}
+	                        }
 	local mass_point_relative_volumes = operations.get_mass_point_relative_volumes(mass_point_data)
 	for index, data in pairs(mass_point_data) do
 		local transformation_matrix = operations.get_mass_point_transformation_matrix(index, mass_point_data, node_data)
@@ -226,10 +226,10 @@ end
 
 function operations.get_inverse_inertial_matrix(inertial_matrix)
 	local inverse_matrix = {
-						        {0, 0, 0},
-						        {0, 0, 0},
-						        {0, 0, 0}
-						   }
+	                        {0, 0, 0},
+	                        {0, 0, 0},
+	                        {0, 0, 0}
+	                       }
 	local determinant = 0
 	local rightwards = 0
 	local leftwards = 0
@@ -279,10 +279,6 @@ function operations.jms_units_to_world_units(data)
 		end
 		return data
 	end
-end
-
-function operations.parse_powered_mass_points(mass_point_data) -- TODO: finish migrating this to 'parser' module. Antigrav PMPs (wing tips, wing bodies, etc.) from the original vehicles are significantly harder, if not outright impossible to parse. I'll try to create a new naming convention for such PMPs
-	-- body
 end
 
 function operations.parse_tires(mass_point_data) -- TODO: finish migrating this to 'parser' module. Attempts to find a "[...] [front[#]/back[#]/axle[#]] [tire]" pattern and create PMPs for each front/back/axle set of tires

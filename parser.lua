@@ -4,7 +4,9 @@
 
 -- With the "engine" interface in place, in the future it will be possible to create user defined engine types and variants, for now, I'll resort to create the most common ones myself and set them as defaults
 
-parser = {}
+-- TODO: antigrav PMPs (wing tips, wing bodies, etc.) from the original vehicles are significantly harder, if not outright impossible to parse. I'll try to create a new naming convention for such PMPs
+
+local parser = {}
 
 local exporter = require("exporter")
 local operations = require("operations")
@@ -68,6 +70,66 @@ function parser.is_pattern_match(word, pattern, ...) -- Third argument as "true"
 	return word == pattern
 end
 
+function parser.new_properties_interface() -- TODO: these were previously called "presets"
+	local properties = {}
+	properties.name = "" -- TODO: skip this field when exporting to tag
+	properties.radius = -1 -- -1 is default to indicate use the "new" physics
+	properties.moment_scale = 1 -- 1 is default in all original vehicle physics
+	properties.density = 0
+	properties.gravity_scale = 0
+	properties.ground_friction = 0
+	properties.ground_depth = 0
+	properties.ground_damp_fraction = 0
+	properties.ground_normal_k1 = 0
+	properties.ground_normal_k0 = 0
+	properties.water_friction = 0
+	properties.water_depth = 0
+	properties.water_density = 0
+	properties.air_friction = 0
+	return properties
+end
+
+function parser.new_properties(name, density, gravity_scale, ground_friction, ground_depth, ground_damp_fraction, ground_normal_k1, ground_normal_k0, water_friction, water_depth, water_density, air_friction)
+	
+	-- TODO: let's see how this works out...
+
+	local properties = parser.new_properties_interface()
+	properties.name = name
+	properties.density = density
+	properties.gravity_scale = gravity_scale
+	properties.ground_friction = ground_friction
+	properties.ground_depth = ground_depth
+	properties.ground_damp_fraction = ground_damp_fraction
+	properties.ground_normal_k1 = ground_normal_k1
+	properties.ground_normal_k0 = ground_normal_k0
+	properties.water_friction = water_friction
+	properties.water_depth = water_depth
+	properties.water_density = water_density
+	properties.air_friction = air_friction
+	return properties
+end
+
+function parser.new_properties_table() -- TODO: in later versions, replace this function with one capable of reading dynamically generated properties from a file.
+	local properties_table = {}
+	table.insert(properties_table, parser.new_properties("scorpion", 8, 1, 0.2, 0.25, 0.05, 0.707107, 0.5, 0.05, 0.25, 1, 0.001))
+	table.insert(properties_table, parser.new_properties("warthog", 5, 1, 0.23, 0.15, 0.05, 0.707107, 0.5, 0.05, 0.25, 1, 0.005))
+	table.insert(properties_table, parser.new_properties("ghost", 3, 1, 0.2, 0.15, 0.05, 0.707107, 0.5, 0.5, 0.25, 1, 0.0025))
+	table.insert(properties_table, parser.new_properties("banshee", 4, 1, 0.2, 0.15, 0.05, 0.707107, 0.5, 0.05, 0.25, 1, 0.005))
+	table.insert(properties_table, parser.new_properties("c_gun_turret", 6, 1, 0.2, 0.15, 0.05, 0.707107, 0.5, 0.05, 0.25, 1, 0.001))
+	return properties_table
+end
+
+function parser.get_properties(name, properties_table)
+	local selected_properties
+	for _, properties in pairs(properties_table) do
+		if name == properties.name then
+			selected_properties = properties -- TODO: ideally, replace this with a "table.copy" function
+		end
+	end
+	assert(selected_properties)
+	return selected_properties
+end
+
 function parser.new_engine_interface()
  	local engine = {}
  	engine.type = ""
@@ -84,6 +146,9 @@ function parser.new_engine_interface()
  	engine.pmp_antigrav_strength = 0
  	engine.pmp_antigrav_offset = 0
  	engine.pmp_antigrav_height = 0
+ 	engine.pmp_antigrav_damp_fraction = 0
+ 	engine.pmp_antigrav_normal_k1 = 0
+ 	engine.pmp_antigrav_normal_k0 = 0
  	-- MP fields
  	engine.mp_flags = {}
  	engine.mp_flags.metallic = false
@@ -147,31 +212,21 @@ function parser.new_antigrav_class() -- TODO
 	-- body
 end
 
-function parser.get_engine_class_list()
+function parser.get_engine_class_list() -- TODO: add the rest of the engine classes, once defined, or replace this with a file lookup
 	local engine_class_list = {}
 	table.insert(engine_class_list, parser.new_front_tire(""))
 	table.insert(engine_class_list, parser.new_back_tire(""))
 	table.insert(engine_class_list, parser.new_default_tire(""))
-	-- TODO: add the rest of the engine classes, once defined
 	return engine_class_list
 end
 
-function parser.parse_tires(mass_point_data) -- TODO: WIP, also, consider merging this with other parse_[engine] functions into a single one
-	local pmps = {}
-	local tires = {}
-	for index, data in pairs(mass_point_data) do
-		local mass_point_engine_class = parser.get_mass_point_engine_class(index, mass_point_data)
-	end
-end
-
-function parser.get_mass_point_engine_class(mass_point, mass_point_data)
+function parser.get_mass_point_engine_class(mass_point) -- Expects a 'mass_point' object created out of a 'mass_point' interface
 	assert(
-		   type(mass_point) == "number" and
-		   type(mass_point_data) == "table"
+		   type(mass_point) == "table"
 		  )
 	local mass_point_engine_class
 	local engine_class_list = parser.get_engine_class_list()
-	local name_as_words = parser.get_as_words(mass_point_data[mass_point].name)
+	local name_as_words = parser.get_as_words(mass_point.name)
 	local type = name_as_words[#name_as_words] or ""
 	local variant = name_as_words[#name_as_words - 1] or ""
 	local type_matches = {}
@@ -186,10 +241,10 @@ function parser.get_mass_point_engine_class(mass_point, mass_point_data)
 			break
 		end
 	end
-	return mass_point_engine_class
+	return mass_point_engine_class -- TODO: this is a mold, basically. Don't modify it
 end
 
-function parser.new_mass_point_interface() -- I won't touch this until tomorrow, I'm drunk
+function parser.new_mass_point_interface()
 	local mass_point = {}
 	mass_point.name = ""
 	mass_point.powered_mass_point = -1
@@ -199,7 +254,7 @@ function parser.new_mass_point_interface() -- I won't touch this until tomorrow,
 	mass_point.relative_mass = 1
 	mass_point.mass = 0
 	mass_point.relative_density = 1
-	mass_point.density = 0 -- TODO: verify this doesn't cause trouble down the road
+	mass_point.density = 0 -- TODO: verify this doesn't cause trouble down the road (it doesn't, it seems)
 	mass_point.position = operations.new_vector(0, 0, 0)
 	mass_point.forward = operations.new_vector(1, 0, 0)
 	mass_point.up = operations.new_vector(0, 0, 1)
@@ -216,7 +271,7 @@ function parser.new_mass_point(name)
 	return mass_point
 end
 
-function parser.new_mass_point_table(total_mass, mass_point_data, node_data) -- TODO: integrate with PMP parsers. Also, convert numbers to strings
+function parser.new_mass_point_table(total_mass, mass_point_data, node_data)
 	local mass_point_table = {}
 	local mass_point_relative_volumes = operations.get_mass_point_relative_volumes(mass_point_data)
 	for index, data in pairs(mass_point_data) do
@@ -224,39 +279,147 @@ function parser.new_mass_point_table(total_mass, mass_point_data, node_data) -- 
 		local mass_point_transformation_matrix = operations.get_mass_point_transformation_matrix(index, mass_point_data, node_data)
 		mass_point_table[index] = parser.new_mass_point(data.name)
 		mass_point = mass_point_table[index]
-		mass_point.name = exporter.compose_relative_path(mass_point.name) -- !@#$. Even mass point nodes with spaces have to be composed...
-		mass_point.powered_mass_point = string.format("%d", -1) -- TODO: get from PMP parsers instead of "-1"
-		mass_point.model_node = string.format("%d", data.parent_node)
-		mass_point.flags.metallic = string.format("%d", mass_point.flags.metallic and 1 or 0) -- TODO: figure out what this flag does, I guess... Maybe "true" means attract projectiles with magnetism enabled?
-		mass_point.relative_mass = string.format("%.6f", mass_point_relative_volumes[index])
-		mass_point.mass = string.format("%.6f", total_mass * mass_point_relative_volumes[index]) -- TODO: verify this doesn't cause trouble down the road
-		mass_point.relative_density = string.format("%.6f", mass_point.relative_density) -- TODO: leave as 1 until I figure out what this does
-		mass_point.density = string.format("%.6f", mass_point.density) -- TODO: figure out what this value does, and replace with presets density on all mass points
-		-- TODO: replace position numeric values with a single "exportable" string, like in the old exporter module
+		-- mass_point.name -- This field is set at create function
+		-- mass_point.powered_mass_point = -1 -- This field is set at the engine parser
+		mass_point.model_node = data.parent_node
+		-- mass_point.flags.metallic -- TODO: figure out what this flag does, I guess... Maybe "true" means attract projectiles with magnetism enabled?
+		mass_point.relative_mass = mass_point_relative_volumes[index]
+		mass_point.mass = total_mass * mass_point_relative_volumes[index] -- TODO: verify this doesn't cause trouble down the road (it doesn't, it seems)
+		-- mass_point.relative_density -- TODO: leave as 1 until I figure out what this does
+		-- mass_point.density -- TODO: figure out what this value does, and replace with presets density on all mass points
 		mass_point.position.x = operations.jms_units_to_world_units(mass_point_transformation_matrix[1][4])
 		mass_point.position.y = operations.jms_units_to_world_units(mass_point_transformation_matrix[2][4])
 		mass_point.position.z = operations.jms_units_to_world_units(mass_point_transformation_matrix[3][4])
-		mass_point.position = string.format("%.6f", mass_point.position.x)..","..string.format("%.6f", mass_point.position.y)..","..string.format("%.6f", mass_point.position.z)
-		mass_point.forward.x = mass_point_transformation_matrix[1][1] -- TODO: get from transformation matrix, and verify these are the good ones (they should be)
+		mass_point.forward.x = mass_point_transformation_matrix[1][1] -- TODO: verify these are the good ones in an unusual test case (they should be)
 		mass_point.forward.y = mass_point_transformation_matrix[1][2]
 		mass_point.forward.z = mass_point_transformation_matrix[1][3]
-		mass_point.forward = string.format("%.6f", mass_point.forward.x)..","..string.format("%.6f", mass_point.forward.y)..","..string.format("%.6f", mass_point.forward.z)
-		mass_point.up.x = mass_point_transformation_matrix[3][1] -- TODO: get from transformation matrix, and verify these are the good ones (they should be)
+		mass_point.up.x = mass_point_transformation_matrix[3][1] -- TODO: verify these are the good ones in an unusual test case (they should be)
 		mass_point.up.y = mass_point_transformation_matrix[3][2]
 		mass_point.up.z = mass_point_transformation_matrix[3][3]
-		mass_point.up = string.format("%.6f", mass_point.up.x)..","..string.format("%.6f", mass_point.up.y)..","..string.format("%.6f", mass_point.up.z)
-		-- mass_point.friction_type -- TODO: get from PMP parsers, and assert that it is a valid enum value
+		-- mass_point.friction_type -- This field is set at the engine parser
 		assert(
 			   mass_point.friction_type == "point" or
 			   mass_point.friction_type == "forward" or
 			   mass_point.friction_type == "left" or
 			   mass_point.friction_type == "up"
 			  )
-		mass_point.friction_parallel_scale = string.format("%.6f", mass_point.friction_parallel_scale) -- TODO: get from PMP parsers
-		mass_point.friction_perpendicular_scale = string.format("%.6f", mass_point.friction_perpendicular_scale) -- TODO: get from PMP parsers
-		mass_point.radius = string.format("%.6f", operations.jms_units_to_world_units(data.radius))
+		-- mass_point.friction_parallel_scale -- This field is set at the engine parser
+		-- mass_point.friction_perpendicular_scale -- This field is set at the engine parser
+		mass_point.radius = operations.jms_units_to_world_units(data.radius)
 	end
 	return mass_point_table
+end
+
+function parser.new_powered_mass_point_interface()
+	local powered_mass_point = {}
+	powered_mass_point.name = ""
+	powered_mass_point.flags = {}
+ 	powered_mass_point.flags.ground_friction = false
+ 	powered_mass_point.flags.water_friction = false
+ 	powered_mass_point.flags.air_friction = false
+ 	powered_mass_point.flags.water_lift = false
+ 	powered_mass_point.flags.air_lift = false
+ 	powered_mass_point.flags.thrust = false
+ 	powered_mass_point.flags.antigrav = false
+ 	powered_mass_point.antigrav_strength = 0
+ 	powered_mass_point.antigrav_offset = 0
+ 	powered_mass_point.antigrav_height = 0
+ 	powered_mass_point.antigrav_damp_fraction = 0
+ 	powered_mass_point.antigrav_normal_k1 = 0
+ 	powered_mass_point.antigrav_normal_k0 = 0
+	return powered_mass_point
+end
+
+function parser.new_powered_mass_point(name)
+	local powered_mass_point = parser.new_powered_mass_point_interface()
+	powered_mass_point.name = name
+	return powered_mass_point
+end
+
+function parser.inherit_fields(object, engine_class) -- Object refers to a 'mass_point' or a 'powered_mass_point'
+	
+	-- TODO: this is probably the trickiest function in the whole project, plenty of things can be reworked here (it works, though)
+
+	for field, value in pairs(engine_class) do
+		local mp_field_suffix = string.sub(field, 1, 3) -- These positions are based on the length of the prefixes of the engine interface fields
+		local pmp_field_suffix = string.sub(field, 1, 4)
+		local is_mp_suffix = (mp_field_suffix == "mp_") -- TODO: verify
+		local is_pmp_suffix = (pmp_field_suffix == "pmp_") -- TODO: verify
+		if is_mp_suffix then
+			local mass_point_field = string.sub(field, 4, -1)
+			if type(value) == "table" then
+				if field == "mp_flags" then -- TODO: replace with dynamic function, special case for nested field "flags.metallic"
+					if object.flags.metallic ~= nil then -- This "not nil" check must be explicit, since flag values may be false. If field exists in object (is a mass_point)
+						object.flags.metallic = engine_class.mp_flags.metallic
+					end
+				end
+			else
+				if object[mass_point_field] then -- If field exists in object (is a mass_point)
+					object[mass_point_field] = value
+				end
+			end
+		elseif is_pmp_suffix then
+			local powered_mass_point_field = string.sub(field, 5, -1)
+			if type(value) == "table" then
+				if field == "pmp_flags" then -- TODO: replace with dynamic function, special case for nested fields under "flags" bitmask
+					if object.flags.ground_friction ~= nil then -- This "not nil" check must be explicit, since flag values may be false. If field exists in object (is a powered_mass_point)
+						object.flags.ground_friction = engine_class.pmp_flags.ground_friction
+						object.flags.water_friction = engine_class.pmp_flags.water_friction
+						object.flags.air_friction = engine_class.pmp_flags.air_friction
+						object.flags.water_lift = engine_class.pmp_flags.water_lift
+						object.flags.air_lift = engine_class.pmp_flags.air_lift
+						object.flags.thrust = engine_class.pmp_flags.thrust
+						object.flags.antigrav = engine_class.pmp_flags.antigrav
+					end
+				end
+			else
+				if object[powered_mass_point_field] then -- If field exists in object (is a powered_mass_point)
+					object[powered_mass_point_field] = value
+				end
+			end
+		end
+	end
+end
+
+function parser.parse_engines(mass_point_table)
+
+	-- TODO: another tricky function, same as above
+
+	local pmps = {}
+	local pmps_count = 0
+	local engine_class_list = parser.get_engine_class_list()
+	for index, mass_point in pairs(mass_point_table) do
+		local mass_point_engine_class
+		for _, engine_class in pairs(engine_class_list) do
+			mass_point_engine_class = parser.get_mass_point_engine_class(mass_point)
+			if mass_point_engine_class then
+				break
+			end
+		end
+		if mass_point_engine_class then
+			local mass_point_name_as_words = parser.get_as_words(mass_point.name)
+			local powered_mass_point_index
+			local powered_mass_point_name = mass_point_name_as_words[#mass_point_name_as_words - 1] -- TODO: verifiy. Assumes the PMP has a valid [variant] [type] structure at this point, therefore no ternaries are used
+			local powered_mass_point_exists = false
+			for pmp_index, pmp in pairs(pmps) do
+				if powered_mass_point_name == pmp.name then
+					powered_mass_point_index = pmp_index
+					powered_mass_point_exists = true
+					break
+				end
+			end
+			if not powered_mass_point_exists then
+				local pmp = parser.new_powered_mass_point(powered_mass_point_name)
+				parser.inherit_fields(pmp, mass_point_engine_class) -- Inherit engine PMP fields to this PMP
+				pmps[pmps_count] = pmp -- Indeces must start at 0, table.insert cannot be used here
+				powered_mass_point_index = pmps_count
+				pmps_count = pmps_count + 1
+			end
+			parser.inherit_fields(mass_point, mass_point_engine_class) -- Inherit engine MP fields to this mass point
+			mass_point.powered_mass_point = powered_mass_point_index
+		end
+	end
+	return pmps
 end
 
 return parser

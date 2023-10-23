@@ -2,6 +2,8 @@
 
 -- Description: checks whether Halo and Invader paths are valid and set on first time execution
 
+-- TODO: assert valid paths are provided by the user when prompted, otherwise the whole thing falls apart
+
 local setup = {}
 local cd -- Current directory
 local cd_handle -- Process handle for CD shell command
