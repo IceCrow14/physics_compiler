@@ -8,6 +8,8 @@ local exporter = require("exporter")
 local operations = require("operations")
 local parser = require("parser")
 
+local rxi_json_lua = require("lib\\json_lua\\json")
+
 local settings
 
 setup.setup()
