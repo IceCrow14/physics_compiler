@@ -1,3 +1,3 @@
-[submodule "lib/json.lua"]
-	path = lib/json_lua
-	url = https://github.com/rxi/json.lua
+[submodule "lib/dkjson"]
+	path = lib/dkjson
+	url = https://github.com/LuaDist/dkjson

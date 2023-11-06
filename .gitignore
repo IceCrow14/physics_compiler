@@ -42,3 +42,4 @@ luac.out
 # Experimental files, will remove main.lua when finished
 settings.txt
 project_notes.txt
+engine_classes.txt

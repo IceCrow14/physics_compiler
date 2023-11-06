@@ -11,6 +11,8 @@ local parser = {}
 local exporter = require("exporter")
 local operations = require("operations")
 
+local dkjson = require("lib\\dkjson\\dkjson") -- NEW
+
 function parser.print_object(object, ...) -- TODO: Debug function, remove on release
 	assert(
 		   #arg == 0 or 
@@ -72,7 +74,7 @@ end
 
 function parser.new_properties_interface() -- TODO: these were previously called "presets"
 	local properties = {}
-	properties.name = "" -- TODO: skip this field when exporting to tag
+	properties.name = "" -- Skip this field when exporting to tag
 	properties.radius = -1 -- -1 is default to indicate use the "new" physics
 	properties.moment_scale = 1 -- 1 is default in all original vehicle physics
 	properties.density = 0
@@ -90,9 +92,6 @@ function parser.new_properties_interface() -- TODO: these were previously called
 end
 
 function parser.new_properties(name, density, gravity_scale, ground_friction, ground_depth, ground_damp_fraction, ground_normal_k1, ground_normal_k0, water_friction, water_depth, water_density, air_friction)
-	
-	-- TODO: let's see how this works out...
-
 	local properties = parser.new_properties_interface()
 	properties.name = name
 	properties.density = density
@@ -204,28 +203,51 @@ function parser.new_default_tire(name)
 	return engine
 end
 
-function parser.new_tread_class() -- TODO
-	-- body
+--[[
+function parser.new_tread_class(variant) -- TODO
+	assert(
+	       type(variant) == "string"
+	      )
+	local engine = parser.new_engine_interface()
+
+	engine.type = "tread"
+	engine.variant = variant
+	-- PMP fields
+	engine.pmp_flags.ground_friction = true
+	-- MP fields
+	engine.mp_friction_type = "point"
+	engine.mp_friction_parallel_scale
+	engine.mp_friction_perpendicular_scale
+
+	return engine
 end
+]]
+
+
 
 function parser.new_antigrav_class() -- TODO
 	-- body
 end
 
+--[[ TODO: remove
 function parser.get_engine_class_list() -- TODO: add the rest of the engine classes, once defined, or replace this with a file lookup
 	local engine_class_list = {}
-	table.insert(engine_class_list, parser.new_front_tire(""))
-	table.insert(engine_class_list, parser.new_back_tire(""))
-	table.insert(engine_class_list, parser.new_default_tire(""))
+	--table.insert(engine_class_list, parser.new_front_tire(""))
+	--table.insert(engine_class_list, parser.new_back_tire(""))
+	--table.insert(engine_class_list, parser.new_default_tire(""))
+
+	engine_class_list = setup.get_engine_types() -- TODO: clean up this thing, here and at the source
+
 	return engine_class_list
 end
+]]
 
-function parser.get_mass_point_engine_class(mass_point) -- Expects a 'mass_point' object created out of a 'mass_point' interface
+function parser.get_mass_point_engine_class(mass_point, engine_class_list) -- Expects a 'mass_point' object created out of a 'mass_point' interface
 	assert(
 		   type(mass_point) == "table"
 		  )
 	local mass_point_engine_class
-	local engine_class_list = parser.get_engine_class_list()
+	-- local engine_class_list = parser.get_engine_class_list() -- TODO: remove
 	local name_as_words = parser.get_as_words(mass_point.name)
 	local type = name_as_words[#name_as_words] or ""
 	local variant = name_as_words[#name_as_words - 1] or ""
@@ -381,17 +403,17 @@ function parser.inherit_fields(object, engine_class) -- Object refers to a 'mass
 	end
 end
 
-function parser.parse_engines(mass_point_table)
+function parser.parse_engines(mass_point_table, engine_class_list) -- NEW added argument
 
 	-- TODO: another tricky function, same as above
 
 	local pmps = {}
 	local pmps_count = 0
-	local engine_class_list = parser.get_engine_class_list()
+	-- local engine_class_list = parser.get_engine_class_list() -- TODO: remove
 	for index, mass_point in pairs(mass_point_table) do
 		local mass_point_engine_class
 		for _, engine_class in pairs(engine_class_list) do
-			mass_point_engine_class = parser.get_mass_point_engine_class(mass_point)
+			mass_point_engine_class = parser.get_mass_point_engine_class(mass_point, engine_class_list) -- mass_point_engine_class = parser.get_mass_point_engine_class(mass_point) -- TODO: cleanup
 			if mass_point_engine_class then
 				break
 			end
@@ -420,6 +442,33 @@ function parser.parse_engines(mass_point_table)
 		end
 	end
 	return pmps
+end
+
+function parser.engine_to_readable_json(engine)
+	local json_key_order = {
+	                        indent = true, 
+	                        keyorder = {
+	                                    "type",
+	                                    "variant",
+	                                    "pmp_flags", -- Nested table keys won't be ordered (possible TODO: review library's instructions about creating a "keyorder" file)
+	                                    "pmp_antigrav_strength",
+	                                    "pmp_antigrav_offset",
+	                                    "pmp_antigrav_height",
+	                                    "pmp_antigrav_damp_fraction",
+	                                    "pmp_antigrav_normal_k1",
+	                                    "pmp_antigrav_normal_k0",
+	                                    "mp_flags",
+	                                    "mp_friction_type",
+	                                    "mp_friction_parallel_scale",
+	                                    "mp_friction_perpendicular_scale",
+	                                    "pmp_flags.water_lift",
+	                                    "pmp_flags.air_lift",
+	                                    "pmp_flags.thrust",
+	                                    "pmp_flags.antigrav"
+	                                   }
+	                       }
+	local json = dkjson.encode(engine, json_key_order)
+	return json
 end
 
 return parser

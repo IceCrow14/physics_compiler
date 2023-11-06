@@ -8,12 +8,14 @@ local exporter = require("exporter")
 local operations = require("operations")
 local parser = require("parser")
 
-local rxi_json_lua = require("lib\\json_lua\\json")
+local dkjson = require("lib\\dkjson\\dkjson") -- NEW
 
 local settings
 
 setup.setup()
 settings = setup.get_settings()
+
+setup.new_engine_types() -- TODO: cleanup
 
 function run_help_message() -- TODO: update this whenever usage syntax changes
 	local message = {
@@ -55,6 +57,12 @@ function run_invalid_pattern_message()
 	                }
 	message = table.concat(message, "\n")
 	print(message)
+end
+
+function run_initialize_engine_classes() -- NEW
+	local message = {
+	                 ""
+	                }
 end
 
 function command_line_guide(arguments)
@@ -121,8 +129,7 @@ function command_line_guide(arguments)
 				inertial_matrix = operations.get_inertial_matrix(center_of_mass, mass, jms_mass_point_table, jms_node_table)
 				inverse_inertial_matrix = operations.get_inverse_inertial_matrix(inertial_matrix)
 				mass_point_table = parser.new_mass_point_table(mass, jms_mass_point_table, jms_node_table)
-				powered_mass_point_table = parser.parse_engines(mass_point_table)
-
+				powered_mass_point_table = parser.parse_engines(mass_point_table, setup.get_engine_types() ) -- TODO: cleanup, engine_class_list
 				composed_properties_set = exporter.compose_properties(selected_properties_set)
 				composed_mass = exporter.compose_mass(mass)
 				composed_center_of_mass = exporter.compose_center_of_mass(center_of_mass)
@@ -149,3 +156,45 @@ function command_line_guide(arguments)
 end
 
 command_line_guide(arg)
+
+-- NEW
+local test_engine_class = parser.new_engine_interface()
+test_engine_class.type = "tire"
+test_engine_class.variant = "ugly_front"
+test_engine_class.pmp_flags.ground_friction = true
+test_engine_class.mp_friction_type = "forward"
+test_engine_class.mp_friction_parallel_scale = 0.75
+test_engine_class.mp_friction_perpendicular_scale = 0.45
+-- local json_encoded_engine = json.encode(test_engine_class)
+-- local json_beautified_engine = json_beautify.beautify(json_encoded_engine)
+-- print(json_encoded_engine)
+
+--local json_encoded_engine = json.encode(test_engine_class)
+local json_encoded_engine = dkjson.encode(test_engine_class, {
+	                                                          indent=true, 
+	                                                          keyorder={
+	                                                                    "type",
+	                                                                    "variant",
+	                                                                    "pmp_flags", -- Nested table keys won't be ordered. Regardless, this is good enough
+	                                                                    "pmp_antigrav_strength",
+	                                                                    "pmp_antigrav_offset",
+	                                                                    "pmp_antigrav_height",
+	                                                                    "pmp_antigrav_damp_fraction",
+	                                                                    "pmp_antigrav_normal_k1",
+	                                                                    "pmp_antigrav_normal_k0",
+	                                                                    "mp_flags",
+	                                                                    "mp_friction_type",
+	                                                                    "mp_friction_parallel_scale",
+	                                                                    "mp_friction_perpendicular_scale",
+	                                                                    "pmp_flags.water_lift",
+	                                                                    "pmp_flags.air_lift",
+	                                                                    "pmp_flags.thrust",
+	                                                                    "pmp_flags.antigrav"
+	                                                                   }
+	                                                         }
+	                                     )
+--print(json_encoded_engine)
+
+-- setup.new_engine_types() -- TODO: remove
+local extracted_engine_types = setup.get_engine_types()
+--parser.print_object(extracted_engine_types)
