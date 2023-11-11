@@ -1,98 +1,48 @@
 -- Setup module
 
--- Description: checks whether Halo and Invader paths are valid and set on first time execution
-
--- TODO: assert valid paths are provided by the user when prompted, otherwise the whole thing falls apart
--- TODO: add validation in 'setup' function for 'engine_types' file
+-- Description: checks whether Halo and Invader paths are valid and set on first time execution, also, creates and restores default data files
 
 local setup = {}
-local cd -- Current directory
-local cd_handle -- Process handle for CD shell command
-local settings_path -- Settings file absolute path
-local settings_handle -- Settings file handle
-local data_path -- Halo CE data folder
-local tags_path -- Halo CE tags folder
-local invader_edit_path -- Invader-edit dependency path
-
--- NEW
-local engine_types_path
-local engine_types_handle
-
 local parser = require("parser")
 local dkjson = require("lib\\dkjson\\dkjson")
+local settings_path -- Settings file path
+local engine_types_path -- Engine types file path
 
 function setup.setup()
-	cd_handle = io.popen("CD", "r")
-	cd = cd_handle:read("*l")
-	cd_handle:close()
+	local settings_handle
+	local engine_types_handle
+	local cd = get_current_directory()
+	-- Settings file check
 	settings_path = cd.."\\settings.txt"
 	settings_handle = io.open(settings_path, "r")
 	while not settings_handle do
-		local data_path_valid
-		local tags_path_valid
-		local invader_edit_path_valid
-		print("SETUP: Failed to access settings file")
-		while not data_path_valid do
-			local cmd_command
-			local cmd_handle
-			local cmd_output
-			io.write("Insert Halo CE data folder full path (in quotes): ") -- Full paths asked in quotes to allow the use of paths with space characters
-			data_path = "\""..io.read("*l").."\""
-			cmd_command = "IF EXIST "..data_path.." ECHO true"
-			cmd_handle = io.popen(cmd_command, "r")
-			cmd_output = cmd_handle:read("*l")
-			cmd_handle:close()
-			if cmd_output == "true" then
-				data_path_valid = true
-				break
-			end
-			print("SETUP: Invalid path")
-		end
-		while not tags_path_valid do
-			local cmd_command
-			local cmd_handle
-			local cmd_output
-			io.write("Insert Halo CE tags folder full path (in quotes): ")
-			tags_path = "\""..io.read("*l").."\""
-			cmd_command = "IF EXIST "..tags_path.." ECHO true"
-			cmd_handle = io.popen(cmd_command, "r")
-			cmd_output = cmd_handle:read("*l")
-			cmd_handle:close()
-			if cmd_output == "true" then
-				tags_path_valid = true
-				break
-			end
-			print("SETUP: Invalid path")
-		end
-		while not invader_edit_path_valid do
-			local cmd_command
-			local cmd_handle
-			local cmd_output
-			io.write("Insert invader-edit.exe full path (in quotes): ")
-			invader_edit_path = "\""..io.read("*l").."\""
-			cmd_command = "IF EXIST "..invader_edit_path.." ECHO true"
-			cmd_handle = io.popen(cmd_command, "r")
-			cmd_output = cmd_handle:read("*l")
-			cmd_handle:close()
-			if cmd_output == "true" then
-				invader_edit_path_valid = true
-				break
-			end
-			print("SETUP: Invalid path")
-		end
+		local data_path -- Halo CE data folder path
+		local tags_path -- Halo CE tags folder path
+		local invader_edit_path -- Invader-edit dependency path
+		print("SETUP: Failed to access settings file. First run?")
+		data_path = request_path("Insert Halo CE data folder full path: ")
+		tags_path = request_path("Insert Halo CE tags folder full path: ")
+		invader_edit_path = request_path("Insert invader-edit.exe full path: ")
 		settings_handle = io.open(settings_path, "w")
 		if settings_handle then
-			settings_handle:write("tags_path="..tags_path.."\n") -- Writes variable names followed by paths to settings file
+			settings_handle:write("tags_path="..tags_path.."\n")
 			settings_handle:write("data_path="..data_path.."\n")
 			settings_handle:write("invader_edit_path="..invader_edit_path.."\n")
 			settings_handle:close()
 		end
+		print("SETUP: Created default settings file.")
 		settings_handle = io.open(settings_path, "r")
 	end
-	data_path = string.sub(settings_handle:read("*l"), 11) -- string.sub used to take away variable name on settings file from line
-	tags_path = string.sub(settings_handle:read("*l"), 11)
-	invader_edit_path = string.sub(settings_handle:read("*l"), 19)
 	settings_handle:close()
+	-- Engine types file check
+	engine_types_path = cd.."\\engine_types.txt"
+	engine_types_handle = io.open(engine_types_path, "r")
+	while not engine_types_handle do
+		create_engine_types_file()
+		print("SETUP: Created default engine type list file.")
+		engine_types_handle = io.open(engine_types_path, "r")
+	end
+	engine_types_handle:close()
 end
 
 function setup.get_settings()
@@ -116,34 +66,79 @@ function setup.get_settings()
 	return setting_table
 end
 
--- NEW
---[[
 function setup.get_engine_types()
 	local engine_types_table = {}
-
-	local json_start
-	local json_end
-	local json
-
-	for line in io.lines(engine_types_path) do
+	local engine_types_handle
+	local run = false
+	engine_types_handle = io.open(engine_types_path, "r")
+	if engine_types_handle then
+		run = true
+		engine_types_handle:close()
+	end
+	if run == true then
 		local i = 1
-		if string.sub(line, 1, 1) == "{" then
-			json_start = i
-			json_end = nil
-		else if string.sub(line, 1, 1) == "}" then
-			json_end = i
+		local json_start_line
+		local json_end_line
+		local json
+		for line in io.lines(engine_types_path) do
+			local first_character = string.sub(line, 1, 1)
+			if first_character == "{" then
+				json_start_line = i
+				json_end_line = nil
+			elseif first_character == "}" then
+				json_end_line = i
+				-- Create new entry at engine_types_table, and copy these line indeces as fields inside said entry (then delete said indeces after importing the JSON, and before decoding it, so they are not added to the decoded JSON string)
+				table.insert(engine_types_table, {})
+				engine_types_table[#engine_types_table].json_start_line = json_start_line
+				engine_types_table[#engine_types_table].json_end_line = json_end_line
+				-- Reset json_start_line
+				json_start_line = nil
+			end
+			i = i + 1
+		end
+		for _, engine_table in ipairs(engine_types_table) do
+			json = get_engine_json(engine_table.json_start_line, engine_table.json_end_line)
+			engine_table.json_start_line = nil
+			engine_table.json_end_line = nil
+			engine_types_table[i] = dkjson.decode(json)
+		end
+	end
+	return engine_types_table
+end
 
-			json_start
+function get_current_directory()
+	local cd
+	local handle
+	handle = io.popen("CD", "r")
+	cd = handle:read("*l")
+	handle:close()
+	return cd
+end
+
+function get_engine_json(json_start_line, json_end_line)
+	local i = 1
+	local json_lines = {}
+	local json
+	for line in io.lines(engine_types_path) do
+		if i >= json_start_line then
+			table.insert(json_lines, line)
+			if i == json_end_line then
+				json = table.concat(json_lines, "\n")
+				return json
+			end
 		end
 		i = i + 1
 	end
-
+	return json
 end
-]]
 
-function setup.new_engine_types()
+function create_settings_file() -- TODO: and replace old code in setup.setup()
+end
+
+function create_engine_types_file()
+	-- This private function creates (or restores) the original engine types file, containing a list of default engine types found in the base game
 	local engine_types_table = {}
-
+	local engine_types_handle
 	-- Tires
 	local front_tire = parser.new_engine_interface() -- Front tires (ideal for control, little slide, produces forward friction)
 	local back_tire = parser.new_engine_interface() -- Back tires (ideal for sliding, little control, produces forward friction)
@@ -164,7 +159,7 @@ function setup.new_engine_types()
 	tread.type = "tread"
 	tread.variant = "default"
 	tread.pmp_flags.ground_friction = true
-	-- Antigrav (WIP: these are kind of tricky, but I will define each that is used in original Halo vehicles for now)
+	-- Antigrav (WIP: these are tricky, but I will define each that is used in original Halo vehicles for now)
 	local ghost_antigrav = parser.new_engine_interface() -- Ghost antigrav (medium separation from the ground, medium antigravity strength)
 	local wraith_front_antigrav = parser.new_engine_interface() -- Wraith front antigrav (short separation from the ground, strong antigravity strength)
 	local wraith_rear_antigrav = parser.new_engine_interface() -- Wraith rear antigrav (short separation from the ground, weak antigravity strength)
@@ -217,7 +212,7 @@ function setup.new_engine_types()
 	-- Aircraft thrusters/lifters/draggers (WIP: these are even trickier... "human plane" vehicle types do not rely on powered mass points to create movement, instead, everything is based on friction scales defined in mass points only)
 	-- TODO: define these
 
-	-- Export engine types
+	-- Add formatted engines to export table
 	table.insert(engine_types_table, front_tire)
 	table.insert(engine_types_table, back_tire)
 	table.insert(engine_types_table, tread)
@@ -226,8 +221,7 @@ function setup.new_engine_types()
 	table.insert(engine_types_table, wraith_rear_antigrav)
 	table.insert(engine_types_table, banshee_body_antigrav)
 	table.insert(engine_types_table, banshee_wing_antigrav)
-
-	engine_types_path = cd.."\\engine_types.txt" -- TODO: remove from here, initialize/validate at setup.setup()
+	-- Export engine types to file
 	engine_types_handle = io.open(engine_types_path, "w")
 	if engine_types_handle then
 		for _, engine in ipairs(engine_types_table) do
@@ -237,69 +231,28 @@ function setup.new_engine_types()
 		end
 		engine_types_handle:close()
 	end
-
 end
 
-function setup.get_engine_types()
-	local engine_types_table = {}
-	local run = false
-
-	engine_types_path = cd.."\\engine_types.txt" -- TODO: remove from here, initialize/validate at setup.setup()
-
-	engine_types_handle = io.open(engine_types_path, "r")
-	if engine_types_handle then
-		run = true
-		engine_types_handle:close()
-	end
-	if run == true then
-		local i = 1
-		local json_start_line
-		local json_end_line
-		local json
-		for line in io.lines(engine_types_path) do
-			local first_character = string.sub(line, 1, 1)
-			if first_character == "{" then
-				json_start_line = i
-				json_end_line = nil
-			elseif first_character == "}" then
-				json_end_line = i
-				-- Create new entry at engine_types_table, and copy these line indeces in fields inside said entry (then delete said indeces after exporting)
-				table.insert(engine_types_table, {}) -- It works
-				engine_types_table[#engine_types_table].json_start_line = json_start_line
-				engine_types_table[#engine_types_table].json_end_line = json_end_line
-				-- Reset json_start_line
-				json_start_line = nil
-			end
-			i = i + 1
+function request_path(prompt)
+	-- This private functions validates paths entered by the user, returns the requested path when a valid one is provided
+	local path
+	local is_valid_path = false
+	while not is_valid_path do
+		local command
+		local handle
+		local output
+		io.write(prompt)
+		path = '"'..io.read("*l")..'"' -- Paths are quoted systematically to allow the use of paths with space characters. Paths can be provided with quotes or without them, as long as they are paired
+		command = "IF EXIST "..path.." ECHO true"
+		handle = io.popen(command, "r")
+		output = handle:read("*l")
+		if output == "true" then
+			is_valid_path = true
+			break
 		end
-		for i, v in ipairs(engine_types_table) do
-			json = setup.get_engine_json( v.json_start_line, v.json_end_line )
-			v.json_start_line = nil
-			v.json_end_line = nil
-			engine_types_table[i] = dkjson.decode(json)
-		end
+		print("SETUP: Invalid path, please provide an existing path, accesible for the current user")
 	end
-	return engine_types_table
-end
-
-function setup.get_engine_json(json_start_line, json_end_line)
-	local i = 1
-	local json_lines = {}
-	local json
-
-	engine_types_path = cd.."\\engine_types.txt" -- TODO: remove from here, initialize/validate at setup.setup()
-
-	for line in io.lines(engine_types_path) do
-		if i >= json_start_line then
-			table.insert(json_lines, line)
-			if i == json_end_line then
-				json = table.concat(json_lines, "\n")
-				return json
-			end
-		end
-		i = i + 1
-	end
-	return json
+	return path
 end
 
 return setup

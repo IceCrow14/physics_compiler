@@ -2,20 +2,18 @@
 
 -- Description: integrates all the modules and starts the application
 
+-- TODO: migrate "properties/presets" to a file, similar to engine types
+
 local setup = require("setup")
 local jms_extractor = require("jms_extractor")
 local exporter = require("exporter")
 local operations = require("operations")
 local parser = require("parser")
 
-local dkjson = require("lib\\dkjson\\dkjson") -- NEW
-
 local settings
 
 setup.setup()
 settings = setup.get_settings()
-
-setup.new_engine_types() -- TODO: cleanup
 
 function run_help_message() -- TODO: update this whenever usage syntax changes
 	local message = {
@@ -26,6 +24,7 @@ function run_help_message() -- TODO: update this whenever usage syntax changes
 	                 "Options:",
 	                 "  -h                           Show this help message and exit.",
 	                 "  -p                           Show a list of selectable sets of vehicle properties.",
+	                 "  -e                           Show a list of available vehicle engine types.",
 	                 "",
 	                 "Arguments:",
 	                 "  jms_path                     Relative path of the JMS file, in quotes",
@@ -59,11 +58,7 @@ function run_invalid_pattern_message()
 	print(message)
 end
 
-function run_initialize_engine_classes() -- NEW
-	local message = {
-	                 ""
-	                }
-end
+
 
 function command_line_guide(arguments)
 	if #arguments == 0 then
@@ -91,7 +86,6 @@ function command_line_guide(arguments)
 				local selected_properties_set = parser.get_properties(set, properties_sets_table)
 
 				local absolute_jms_path
-				-- local absolute_tag_path
 				local relative_tag_path
 
 				local jms_node_table
@@ -156,45 +150,3 @@ function command_line_guide(arguments)
 end
 
 command_line_guide(arg)
-
--- NEW
-local test_engine_class = parser.new_engine_interface()
-test_engine_class.type = "tire"
-test_engine_class.variant = "ugly_front"
-test_engine_class.pmp_flags.ground_friction = true
-test_engine_class.mp_friction_type = "forward"
-test_engine_class.mp_friction_parallel_scale = 0.75
-test_engine_class.mp_friction_perpendicular_scale = 0.45
--- local json_encoded_engine = json.encode(test_engine_class)
--- local json_beautified_engine = json_beautify.beautify(json_encoded_engine)
--- print(json_encoded_engine)
-
---local json_encoded_engine = json.encode(test_engine_class)
-local json_encoded_engine = dkjson.encode(test_engine_class, {
-	                                                          indent=true, 
-	                                                          keyorder={
-	                                                                    "type",
-	                                                                    "variant",
-	                                                                    "pmp_flags", -- Nested table keys won't be ordered. Regardless, this is good enough
-	                                                                    "pmp_antigrav_strength",
-	                                                                    "pmp_antigrav_offset",
-	                                                                    "pmp_antigrav_height",
-	                                                                    "pmp_antigrav_damp_fraction",
-	                                                                    "pmp_antigrav_normal_k1",
-	                                                                    "pmp_antigrav_normal_k0",
-	                                                                    "mp_flags",
-	                                                                    "mp_friction_type",
-	                                                                    "mp_friction_parallel_scale",
-	                                                                    "mp_friction_perpendicular_scale",
-	                                                                    "pmp_flags.water_lift",
-	                                                                    "pmp_flags.air_lift",
-	                                                                    "pmp_flags.thrust",
-	                                                                    "pmp_flags.antigrav"
-	                                                                   }
-	                                                         }
-	                                     )
---print(json_encoded_engine)
-
--- setup.new_engine_types() -- TODO: remove
-local extracted_engine_types = setup.get_engine_types()
---parser.print_object(extracted_engine_types)
