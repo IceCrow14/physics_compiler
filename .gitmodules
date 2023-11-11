@@ -1,3 +1,7 @@
 [submodule "lib/dkjson"]
 	path = lib/dkjson
 	url = https://github.com/LuaDist/dkjson
+[submodule "build/srlua"]
+	path = build/srlua
+	url = https://github.com/LuaDist/srlua
+	branch = Windows-x86
