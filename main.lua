@@ -24,7 +24,7 @@ function run_help_message() -- TODO: update this whenever usage syntax changes
 	                 "Options:",
 	                 "  -h                           Show this help message and exit.",
 	                 "  -p                           Show a list of selectable sets of vehicle properties.",
-	                 "  -e                           Show a list of available vehicle engine types.",
+	                 -- "  -e                           Show a list of available vehicle engine types.", -- 
 	                 "",
 	                 "Arguments:",
 	                 "  jms_path                     Relative path of the JMS file, in quotes",
@@ -74,7 +74,10 @@ function command_line_guide(arguments)
 			run_presets_message(properties_table)
 		elseif #arguments == 1 and arguments[1] == "-e" then
 			-- Show engines list
-			-- TODO
+			local engine_types_table = setup.get_engine_types()
+			-- TODO: display only customized fields of each engine interface, not the full JSON nor the full data table?
+			print("Work in process! Stay tuned")
+			
 		else
 			if #arguments == 3 then
 				-- Validate input arguments and run application if valid
