@@ -77,7 +77,6 @@ function command_line_guide(arguments)
 			local engine_types_table = setup.get_engine_types()
 			-- TODO: display only customized fields of each engine interface, not the full JSON nor the full data table?
 			print("Work in process! Stay tuned")
-			
 		else
 			if #arguments == 3 then
 				-- Validate input arguments and run application if valid
