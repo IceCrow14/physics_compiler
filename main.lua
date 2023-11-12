@@ -17,7 +17,8 @@ settings = setup.get_settings()
 
 function run_help_message() -- TODO: update this whenever usage syntax changes
 	local message = {
-	                 "Usage: lua main.lua [ -h | -p | <jms_path> <mass> <properties> ]",
+	                 -- "Usage: lua main.lua [ -h | -p | <jms_path> <mass> <properties> ]", -- Old usage, before compiling as stand-alone executable
+	                 "Usage: physics_compiler.exe [ -h | -p | <jms_path> <mass> <properties> ]",
 	                 "",
 	                 "Physics compiler for Halo Custom Edition by IceCrow14",
 	                 "",
