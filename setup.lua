@@ -16,21 +16,7 @@ function setup.setup()
 	settings_path = root.."\\settings.txt"
 	settings_handle = io.open(settings_path, "r")
 	while not settings_handle do
-		local data_path -- Halo CE data folder path
-		local tags_path -- Halo CE tags folder path
-		local invader_edit_path -- Invader-edit dependency path
-		print("SETUP: Failed to access settings file. First run?")
-		data_path = request_path("Insert Halo CE data folder full path: ")
-		tags_path = request_path("Insert Halo CE tags folder full path: ")
-		invader_edit_path = request_path("Insert invader-edit.exe full path: ")
-		settings_handle = io.open(settings_path, "w")
-		if settings_handle then
-			settings_handle:write("tags_path="..tags_path.."\n")
-			settings_handle:write("data_path="..data_path.."\n")
-			settings_handle:write("invader_edit_path="..invader_edit_path.."\n")
-			settings_handle:close()
-		end
-		print("SETUP: Created default settings file.")
+		create_settings_file()
 		settings_handle = io.open(settings_path, "r")
 	end
 	settings_handle:close()
@@ -39,7 +25,6 @@ function setup.setup()
 	engine_types_handle = io.open(engine_types_path, "r")
 	while not engine_types_handle do
 		create_engine_types_file()
-		print("SETUP: Created default engine type list file.")
 		engine_types_handle = io.open(engine_types_path, "r")
 	end
 	engine_types_handle:close()
@@ -120,15 +105,6 @@ function get_root_directory()
 	return string.sub(source, 1, directory_end)
 end
 
-function get_current_directory() -- TODO: remove, deprecated and replaced by get_root_directory()
-	local cd
-	local handle
-	handle = io.popen("CD", "r")
-	cd = handle:read("*l")
-	handle:close()
-	return cd
-end
-
 function get_engine_json(json_start_line, json_end_line)
 	local i = 1
 	local json_lines = {}
@@ -146,7 +122,24 @@ function get_engine_json(json_start_line, json_end_line)
 	return json
 end
 
-function create_settings_file() -- TODO: and replace old code in setup.setup()
+function create_settings_file()
+	-- This private function creates (or restores) the original settings file, containing a list of paths of your Halo Custom Edition installation and external dependencies
+	local data_path -- Halo CE data folder path
+	local tags_path -- Halo CE tags folder path
+	local invader_edit_path -- Invader-edit.exe dependency path
+	local settings_handle
+	print("SETUP: Failed to access settings file. First run?")
+	data_path = request_path("Insert Halo CE data folder full path: ")
+	tags_path = request_path("Insert Halo CE tags folder full path: ")
+	invader_edit_path = request_path("Insert invader-edit.exe full path: ")
+	settings_handle = io.open(settings_path, "w")
+	if settings_handle then
+		settings_handle:write("tags_path="..tags_path.."\n")
+		settings_handle:write("data_path="..data_path.."\n")
+		settings_handle:write("invader_edit_path="..invader_edit_path.."\n")
+		settings_handle:close()
+		print("SETUP: Created default settings file.")
+	end
 end
 
 function create_engine_types_file()
@@ -244,6 +237,7 @@ function create_engine_types_file()
 			engine_types_handle:write("\n")
 		end
 		engine_types_handle:close()
+		print("SETUP: Created default engine type list file.")
 	end
 end
 
