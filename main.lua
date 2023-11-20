@@ -12,9 +12,6 @@ local parser = require("parser")
 
 local settings
 
-setup.setup()
-settings = setup.get_settings()
-
 function run_help_message() -- TODO: update this whenever usage syntax changes
 	local message = {
 	                 -- "Usage: lua main.lua [ -h | -p | <jms_path> <mass> <properties> ]", -- Old usage, before compiling as stand-alone executable
@@ -32,7 +29,7 @@ function run_help_message() -- TODO: update this whenever usage syntax changes
 	                 "  mass                         Total vehicle mass",
 	                 "  properties                   Name of the set of vehicle properties",
 	                 "",
-	                 "Example: lua main.lua \"vehicles\\my_vehicle\\physics\\my_vehicle_collision_and_physics_model.jms\" 5000 warthog"
+	                 "Example: physics_compiler.exe \"vehicles\\my_vehicle\\physics\\my_vehicle_collision_and_physics_model.jms\" 5000 warthog"
 	                }
 	message = table.concat(message, "\n")
 	print(message)
@@ -58,8 +55,6 @@ function run_invalid_pattern_message()
 	message = table.concat(message, "\n")
 	print(message)
 end
-
-
 
 function command_line_guide(arguments)
 	if #arguments == 0 then
@@ -152,4 +147,6 @@ function command_line_guide(arguments)
 	end
 end
 
+setup.setup()
+settings = setup.get_settings()
 command_line_guide(arg)

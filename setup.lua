@@ -11,9 +11,9 @@ local engine_types_path -- Engine types file path
 function setup.setup()
 	local settings_handle
 	local engine_types_handle
-	local cd = get_current_directory()
+	local root = get_root_directory()
 	-- Settings file check
-	settings_path = cd.."\\settings.txt"
+	settings_path = root.."\\settings.txt"
 	settings_handle = io.open(settings_path, "r")
 	while not settings_handle do
 		local data_path -- Halo CE data folder path
@@ -35,7 +35,7 @@ function setup.setup()
 	end
 	settings_handle:close()
 	-- Engine types file check
-	engine_types_path = cd.."\\engine_types.txt"
+	engine_types_path = root.."\\engine_types.txt"
 	engine_types_handle = io.open(engine_types_path, "r")
 	while not engine_types_handle do
 		create_engine_types_file()
@@ -96,7 +96,7 @@ function setup.get_engine_types()
 			end
 			i = i + 1
 		end
-		for _, engine_table in ipairs(engine_types_table) do
+		for i, engine_table in ipairs(engine_types_table) do
 			json = get_engine_json(engine_table.json_start_line, engine_table.json_end_line)
 			engine_table.json_start_line = nil
 			engine_table.json_end_line = nil
@@ -106,7 +106,21 @@ function setup.get_engine_types()
 	return engine_types_table
 end
 
-function get_current_directory()
+function get_root_directory()
+	local raw_source = debug.getinfo(2).source -- To get the file path: pass "1" if function is called from main script. Here is "2" because it's called from a (direct) module of main script
+	local source = string.sub(raw_source, 2, #raw_source) -- Removes the initial "@" character added by Lua
+	local directory_end = -1
+	for i = -1, -#source, -1 do
+		local character = string.sub(source, i, i)
+		if character == "\\" then
+			directory_end = i - 1
+			break -- Exits loop at the first backslash match
+		end
+	end
+	return string.sub(source, 1, directory_end)
+end
+
+function get_current_directory() -- TODO: remove, deprecated and replaced by get_root_directory()
 	local cd
 	local handle
 	handle = io.popen("CD", "r")
