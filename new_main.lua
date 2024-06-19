@@ -1,10 +1,9 @@
--- Physics compiler new main file (On Windows, call using launcher.cmd! Otherwise, relative paths will fail and everything will break)
+-- Physics compiler new main file (On Windows, call this using launcher.cmd! Otherwise, relative paths will fail and everything will break)
 -- * the root directory is accessible through system environment variable "root_directory" (includes the trailing slash)
 -- * The goal is to create a system that is compatible with both Linux and Windows now, for the time being, I will use this file to run tests
--- 
 -- * It seems I can grab the srlua from the LuaDist GitHub archive! For each OS variation! I may replace my current srlua dependency with each OS's srlua variant
--- JSON "keyorder" applies in nested tables too (save keyorders, they're not written anywhere else!)
--- 
+-- * dkjson's JSON "keyorder" applies in nested tables too
+
 local new_system_utilities = require("new_system_utilities")
 local new_extractor = require("new_extractor")
 local new_calculator = require("new_calculator")
@@ -13,6 +12,37 @@ local new_exporter = require("new_exporter")
 local new_setup_pmps = require("new_setup_pmps")
 
 local dkjson = require("lib/dkjson/dkjson")
+
+-- TODO: arguments that create new types, modify existing types, and restore original types, etc... Will come later
+-- TODO: push this somewhere else... Also, the color text codes are platform-dependent, as far as I know... 
+function help_message(signal)
+    local message = [[
+Physics compiler
+
+Usage: launcher.cmd [options] <type> <jms_path> <physics_path>
+
+Options:
+  -h                 Shows this help message
+  -s                 Run interactive mode to setup paths and settings
+  -m                 Mass value (overrides the mass value from the vehicle type properties)
+  -i                 Invader-edit path
+  -t                 Tags directory
+
+Arguments:
+  - type               Vehicle type from the "types" folder
+  - jms_path           JMS source file path and extension
+  - physics_path       Output tag file path and extension
+]]
+    if signal == "no_settings_file" then
+        message = message..[[ [33m
+WARNING: settings.json file not found, if this is your first time running this application, 
+         start over using option -s to enable interactive mode and set up your environment, 
+         you will be required to provide valid paths to use this program. [0m
+]]
+        return message
+    end
+    return message
+end
 
 function request_input(prompt)
     io.write(prompt)
@@ -46,57 +76,31 @@ end
 
 -- TODO: change this variable to "linux" in the Linux branch
 local os_type = new_system_utilities.get_running_os()
-
-local is_help_mode
-local is_setup_mode
-
 -- TODO: I put these here because I want an initial check that asks the user to configure paths using -s mode on a first run basis
 -- And print a special colored message asking them to do that when paths haven't been configured
 -- Or rather... TODO: default to the "help" or "no arguments" mode until settings are defined
 local settings = new_system_utilities.import_settings()
-
+local is_help_mode
+local is_setup_mode
 local mass
 local invader_edit_path
 local tags_directory
 local data_directory
-
 local type_name
 local jms_path
 local tag_path
-
 local properties
 local type_table
 
-print("Physics compiler")
-
+-- Since Lua doesn't have native optables support, I had to handle the argument logic myself
 for k, v in pairs(arg) do
-    -- print("- "..k.." = "..v)
-
-    -- TODO: Ok, here we go... Since Lua doesn't have native optables support, I have to handle the argument logic myself...
-    -- physics_compiler [options] <type> <jms_path> <physics_path>
-    -- no arguments: help message
-    -- options:
-    -- -h - Help message (ignores all arguments)
-    -- -s - Setup paths interactively
-    -- -m - Mass value (overrides type mass)
-    -- -i - Invader path
-    -- -t - tags directory
-    -- TODO: arguments that create new types, modify existing types, and restore original types, etc... These will come later
-    -- 
-    -- IF RUNNING FOR A FIRST TIME, OR DON'T KNOW WHAT TO DO, SUGGEST RUNNING "physics_compiler -s"
-    -- Also... Have these do nothing, unless all other arguments have been parsed correctly (or if invalid arguments are found/help message is called)
-
-    if (#arg == 0) then
-        -- print("<help message, no arguments>")
+    if (#arg == 0 or not settings) then
         is_help_mode = true
         break
-        -- return 0
     end
     if (v == "-h") then
-        -- print("<help message>")
         is_help_mode = true
         break
-        -- return 0
     end
     if (v == "-s") then
         is_setup_mode = true
@@ -120,7 +124,7 @@ for k, v in pairs(arg) do
             print("error: invalid -i argument (file does not exist)")
             return 1
         end
-        -- TODO: a last check to confirm that the file is accessible (or implement in the system utilities module?)
+        -- TODO: maybe add a last check to confirm that the file is accessible (or implement in the system utilities module?)
     end
     if (v == "-t") then
         tags_directory = arg[k + 1]
@@ -140,16 +144,12 @@ for k, v in pairs(arg) do
         return 1
     end
 end
+
 -- ===== Help message mode =====
--- TODO?
-if not settings then
-    is_help_mode = true
-end
 if is_help_mode then
-
-    -- TODO: here display the generic help message, and test if the "settings" file was found or not: if not, display the scary special first time message. Boooh, scary message
-    -- * * * * *
-
+    -- This returns "true" if the settings.json is absent; "no_settings_file" otherwise
+    local no_settings_file = settings and true or "no_settings_file"
+    print(help_message(no_settings_file))
     return 0
 end
 
@@ -165,7 +165,7 @@ jms_path = arg[#arg - 1]
 tag_path = arg[#arg]
 
 -- Type check
--- TODO: refactor this and make it system-agnostic
+-- TODO: refactor this and make it system-agnostic (and maybe push it to the system utilities module)
 local available_types = new_system_utilities.get_json_files_in_dir(".\\types")
 local is_valid_type = false
 for i, v in ipairs(available_types) do
@@ -191,7 +191,6 @@ if not mass then
     -- If mass not provided by the user, then uses the mass from the type definition
     mass = type_table.properties.mass
 end
-
 
 if not invader_edit_path then
     -- If not defined by the user from the arguments list, take it from the settings file
