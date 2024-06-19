@@ -203,7 +203,7 @@ if not invader_edit_path then
 end
 if not tags_directory then
     -- If not defined by the user from the arguments list, take it from the settings file
-    invader_edit_path = settings.tags_directory
+    tags_directory = settings.tags_directory
 end
 
 -- JMS file check
