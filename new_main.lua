@@ -3,6 +3,7 @@
 -- * The goal is to create a system that is compatible with both Linux and Windows now, for the time being, I will use this file to run tests
 -- * It seems I can grab the srlua from the LuaDist GitHub archive! For each OS variation! I may replace my current srlua dependency with each OS's srlua variant
 -- * dkjson's JSON "keyorder" applies in nested tables too
+-- TODO: refresh Git files, remove all cached files (because some of them show up as duplicate in the root folder) and add the current ones again
 
 local new_system_utilities = require("new_system_utilities")
 local new_extractor = require("new_extractor")
