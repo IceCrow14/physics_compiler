@@ -94,19 +94,24 @@ local type_table
 
 -- Since Lua doesn't have native optables support, I had to handle the argument logic myself
 for k, v in pairs(arg) do
-    if (#arg == 0 or not settings) then
+    if #arg == 0 then
         is_help_mode = true
         break
     end
-    if (v == "-h") then
+    if v == "-h" then
         is_help_mode = true
         break
     end
-    if (v == "-s") then
+    if v == "-s" then
         is_setup_mode = true
         break
     end
-    if (v == "-m") then
+    -- This check must go after the -s option check, or it will block it and prevent the user from running it
+    if not settings then
+        is_help_mode = true
+        break
+    end
+    if v == "-m" then
         -- This optional parameter allows passing a custom mass, but why? Because mass affects all inertia and mass distribution calculations
         mass = tonumber(arg[k + 1])
         if not mass then
@@ -114,7 +119,7 @@ for k, v in pairs(arg) do
             return 1
         end
     end
-    if (v == "-i") then
+    if v == "-i" then
         invader_edit_path = arg[k + 1]
         if not invader_edit_path then
             print("error: invalid -i argument")
@@ -126,7 +131,7 @@ for k, v in pairs(arg) do
         end
         -- TODO: maybe add a last check to confirm that the file is accessible (or implement in the system utilities module?)
     end
-    if (v == "-t") then
+    if v == "-t" then
         tags_directory = arg[k + 1]
         if not tags_directory then
             print("error: invalid -t argument")
@@ -139,7 +144,7 @@ for k, v in pairs(arg) do
         -- TODO: a last check to confirm that the file is accessible (or implement in the system utilities module?)
     end
     -- At this point, the script expects a valid, sufficient argument set to create a tag, all help/interactive mode checks have been passed
-    if (#arg < 3) then
+    if #arg < 3 then
         print("error: invalid or insufficient arguments to create physics tag")
         return 1
     end
