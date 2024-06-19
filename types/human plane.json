@@ -1,0 +1,20 @@
+{
+  "name":"human plane",
+  "properties":{
+    "radius":4,
+    "moment_scale":0.3,
+    "mass":10000,
+    "density":4,
+    "gravity_scale":1,
+    "ground_friction":0.2,
+    "ground_depth":0.2,
+    "ground_damp_fraction":0.05,
+    "ground_normal_k1":0.707107,
+    "ground_normal_k0":0.5,
+    "water_friction":0.05,
+    "water_depth":0.25,
+    "water_density":1,
+    "air_friction":0.02
+  },
+  "pmps":[]
+}
