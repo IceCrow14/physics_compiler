@@ -179,8 +179,11 @@ function module.get_jms_mass_point_transformation_matrix(mass_point, jms_mass_po
         jms_mass_point_table[mass_point].relative_translation_vector[3]
     )
 	local relative_rotation_quaternion = module.Quaternion(
-        -- Sign inverted for "w" term to match the right-handed frame of reference of 3DS Max
-        -jms_mass_point_table[mass_point].relative_rotation_quaternion[4],
+        -- (Sign inverted for "w" term to match the right-handed frame of reference of 3DS Max)
+        -- Reminder: this decision has been reversed: Halo and 3DS Max use inverse systems of reference (one is right handed, the other left handed)
+        --           now, the sign of "w" is left untouched, not negative (so not inverted)
+        -- The reason behind this was that this sign was inverting the rotations of mass points, affecting their "up" and "forward" vectors, now it's fine
+        jms_mass_point_table[mass_point].relative_rotation_quaternion[4],
         jms_mass_point_table[mass_point].relative_rotation_quaternion[1], 
         jms_mass_point_table[mass_point].relative_rotation_quaternion[2], 
         jms_mass_point_table[mass_point].relative_rotation_quaternion[3]

@@ -79,7 +79,6 @@ end
 local os_type = new_system_utilities.get_running_os()
 -- TODO: I put these here because I want an initial check that asks the user to configure paths using -s mode on a first run basis
 -- And print a special colored message asking them to do that when paths haven't been configured
--- Or rather... TODO: default to the "help" or "no arguments" mode until settings are defined
 local settings = new_system_utilities.import_settings()
 local is_help_mode
 local is_setup_mode

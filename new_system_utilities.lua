@@ -41,7 +41,6 @@ function module.get_json_files_in_dir(directory)
     repeat
         if line and string.sub(line, -5, -1) == ".json" then
             local bare_file_name = string.sub(line, 1, -6)
-            -- print(bare_file_name)
             table.insert(files, bare_file_name)
         end
         line = file_list:read("*l")
