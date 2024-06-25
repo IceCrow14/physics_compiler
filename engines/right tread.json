@@ -1,0 +1,10 @@
+{
+  "name":"right tread",
+  "powered_mass_point_name":"right",
+  "flags":{
+    "metallic":0
+  },
+  "friction_type":"point",
+  "friction_parallel_scale":1,
+  "friction_perpendicular_scale":1
+}

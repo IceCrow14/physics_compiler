@@ -102,6 +102,7 @@ end
 
 function module.get_standard_types()
 	return {
+		-- TODO: make all of these part of the "module" table, and update their references, and remove their "exporter" functions
 		HumanTankType(),
 		HumanJeepType(),
 		HumanBoatType(),

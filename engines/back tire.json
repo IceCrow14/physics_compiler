@@ -1,0 +1,10 @@
+{
+  "name":"back tire",
+  "powered_mass_point_name":"back",
+  "flags":{
+    "metallic":0
+  },
+  "friction_type":"forward",
+  "friction_parallel_scale":0.45,
+  "friction_perpendicular_scale":0.65
+}

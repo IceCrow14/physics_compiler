@@ -1,0 +1,10 @@
+{
+  "name":"fighter body",
+  "powered_mass_point_name":"secondary antigravity",
+  "flags":{
+    "metallic":0
+  },
+  "friction_type":"forward",
+  "friction_parallel_scale":0.25,
+  "friction_perpendicular_scale":1
+}

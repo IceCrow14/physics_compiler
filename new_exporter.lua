@@ -248,7 +248,7 @@ function module.FinalInertialMatrixAndInverse(inertial_matrix, inverse_inertial_
     return final_matrices
 end
 
-function module.FinalProperties(properties, center_of_mass, moments_vector)
+function module.FinalProperties(properties, center_of_mass, moments_vector, override_mass)
     -- Expects a properties table (as in, a presets table) from a Type object, a center of mass vector, and a moments vector
     -- Note: expects a (in-memory?, no, not anymore, unless... Maybe, unless mass and any other properties are manipulated before daring touch anything from the calculator module) properties table, because there may be "parsed" parameters that affect global properties in mass point names... No. Forbid (some of) them, they would cause a mess
     -- Returns a table of strings ready to export to Invader, to the global properties (unnamed) section of the physics tag
@@ -256,7 +256,8 @@ function module.FinalProperties(properties, center_of_mass, moments_vector)
     local final_properties = {}
     final_properties.radius = string.format("%.6f", properties.radius)
 	final_properties.moment_scale = string.format("%.6f", properties.moment_scale)
-	final_properties.mass = string.format("%.6f", properties.mass)
+    -- TODO: fix this, make sure that override mass effectively replaces the properties mass value when specified, and add comments explaining this
+	final_properties.mass = (override_mass and string.format("%.6f", override_mass)) or string.format("%.6f", properties.mass)
     -- * center_of_mass is geometry dependent
     final_properties.center_of_mass = {}
     for axis, value in pairs(center_of_mass) do

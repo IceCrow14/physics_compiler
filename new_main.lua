@@ -191,6 +191,7 @@ for k, v in pairs(all_types) do
         break
     end
 end
+local all_engines = new_parser.import_engines()
 
 -- Mass override check
 if not mass then
@@ -231,12 +232,12 @@ local jms_mass_point_relative_masses = new_calculator.get_jms_mass_point_relativ
 -- TODO: rename function to "jms" center of mass vector, and arguments name where required
 local jms_center_of_mass = new_calculator.get_center_of_mass_vector(jms_mass_point_relative_masses, jms_mass_points, jms_nodes)
 -- ===== Processing stage =====
-local mass_points = new_parser.get_mass_point_table(jms_mass_point_relative_masses, jms_mass_points, jms_nodes, mass)
+local mass_points = new_parser.get_mass_point_table(jms_mass_point_relative_masses, jms_mass_points, jms_nodes, mass, all_engines, type_table.pmps)
 local inertial_matrix = new_calculator.get_inertial_matrix(mass, jms_center_of_mass, jms_mass_point_relative_masses, jms_mass_points, jms_nodes)
 local inverse_inertial_matrix = new_calculator.get_inverse_inertial_matrix(inertial_matrix)
 local moments_vector = new_calculator.get_moments_vector(inertial_matrix)
 -- ===== Final stage =====
-local final_properties = new_exporter.FinalProperties(properties, jms_center_of_mass, moments_vector)
+local final_properties = new_exporter.FinalProperties(properties, jms_center_of_mass, moments_vector, mass)
 local final_inertial_matrices = new_exporter.FinalInertialMatrixAndInverse(inertial_matrix, inverse_inertial_matrix)
 local final_powered_mass_points = new_exporter.FinalPoweredMassPoints(powered_mass_points)
 local final_mass_points = new_exporter.FinalMassPoints(mass_points)

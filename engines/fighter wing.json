@@ -1,0 +1,10 @@
+{
+  "name":"fighter wing",
+  "powered_mass_point_name":"",
+  "flags":{
+    "metallic":0
+  },
+  "friction_type":"up",
+  "friction_parallel_scale":2,
+  "friction_perpendicular_scale":0.25
+}
