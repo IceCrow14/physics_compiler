@@ -9,7 +9,7 @@ local module = {}
 
 function module.get_moments_vector(inertial_matrix)
     -- TODO: wait... Is this right? Got it! These values are determined not only by the matrix, but also by the "radius" mysterious global value
-    -- * When radius is negative, uses "the new updated" physics according to the Guerilla dialog) and the pivot values from the matrix
+    -- * When radius is negative, uses "the new updated" physics according to the Guerilla dialog and the pivot values from the matrix
     -- * Otherwise, they differ by a small amount, I still don't know by how much: regardless of the "radius" value, only its sign determines the outcomes
     -- Returns the xx_moment, yy_moment and zz_moment geometry dependent values that go in the properties section
     -- These values are unitless, so they are not scaled to Halo world units
@@ -183,6 +183,7 @@ function module.get_jms_mass_point_transformation_matrix(mass_point, jms_mass_po
         -- Reminder: this decision has been reversed: Halo and 3DS Max use inverse systems of reference (one is right handed, the other left handed)
         --           now, the sign of "w" is left untouched, not negative (so not inverted)
         -- The reason behind this was that this sign was inverting the rotations of mass points, affecting their "up" and "forward" vectors, now it's fine
+        -- I think the issue was caused by ignoring that mass point rotations are relative to parent node rotations, or they are specified as negative in the JMS file, something along those lines 
         jms_mass_point_table[mass_point].relative_rotation_quaternion[4],
         jms_mass_point_table[mass_point].relative_rotation_quaternion[1], 
         jms_mass_point_table[mass_point].relative_rotation_quaternion[2], 
@@ -202,6 +203,7 @@ function module.get_jms_node_transformation_matrix(node, jms_node_table)
     )
 	local relative_rotation_quaternion = module.Quaternion(
         -- Sign inverted on term "w" to match the right-handed frame of reference of 3DS Max
+        -- TODO: test reversing this too to match Halo's frame of reference rather than 3DS Max's (by removing the negative sign). Nvm, this is fine as it is right now.
         -jms_node_table[node].relative_rotation_quaternion[4], 
         jms_node_table[node].relative_rotation_quaternion[1], 
         jms_node_table[node].relative_rotation_quaternion[2], 

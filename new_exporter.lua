@@ -13,7 +13,7 @@ local module = {}
 -- TODO: replace the imported module path and name when I rename it
 local calculator = require("new_calculator")
 
-function module.export_tag(create, fill, os_type)
+function module.export_tag(create, fill, is_windows_host)
     -- Expects "create" to be the Invader-edit create tag command, and likewise, expects "fill" to be the command list containing "insert" and "set" commands
     -- All these commands are expected to be system-agnostic: system-specific subroutines will handle calling them based on the running OS
 
@@ -23,11 +23,11 @@ function module.export_tag(create, fill, os_type)
     -- (but since there is no system-agnostic way to redirect output to nowhere, the screen is cleared, well... )
 
     -- local is_linux = os.execute("@uname")
-    -- local is_windows = os.execute("@ver")
+    -- local is_windows_host = os.execute("@ver")
 
     -- TODO: test both of these using the executables: both of them
     -- TODO: maybe add exit code in return statements, and pass it as the main command's exit code?
-    if (os_type == "linux") then
+    if (not is_windows_host) then
         print("Exporting tag in Linux... ")
         -- Linux can run programs specified in quotes directly, unlike Windows, no funny makeup needed
         os.execute(create)
@@ -35,18 +35,17 @@ function module.export_tag(create, fill, os_type)
             os.execute(v)
         end
         return
-    elseif (os_type == "windows") then
-        -- In Windows, it is necessary to run Invader using CALL because this program will add quotes to the Invader executable path 
-        -- (programs in quotes are not recognized as such, and do not run, unless run with CALL (in background), or with START (in new foreground) using tricky argument combinations)
-        print("Exporting tag in Windows... ")
-        os.execute("CALL "..create)
-        for i, v in ipairs(fill) do
-            os.execute("CALL "..v)
-        end
-        return
     end
-    print("Attempt to call export_tag without specifying an OS... ")
+    -- In Windows, it is necessary to run Invader using CALL because this program will add quotes to the Invader executable path 
+    -- Programs in quotes are not recognized and do not run, unless run with CALL (in background), or with START (in new foreground window) using tricky argument combinations
+    print("Exporting tag in Windows... ")
+    os.execute("CALL "..create)
+    for i, v in ipairs(fill) do
+        os.execute("CALL "..v)
+    end
     return
+    -- print("Attempt to call export_tag without specifying an OS... ")
+    -- return
 end
 
 function module.invader_fill_tag_command_list(invader_edit_path, tags_directory, tag_path, final_properties, final_matrices, final_powered_mass_points, final_mass_points)

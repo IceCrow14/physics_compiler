@@ -4,15 +4,20 @@
 -- * It seems I can grab the srlua from the LuaDist GitHub archive! For each OS variation! I may replace my current srlua dependency with each OS's srlua variant
 -- * dkjson's JSON "keyorder" applies in nested tables too
 -- TODO: refresh Git files, remove all cached files (because some of them show up as duplicate in the root folder) and add the current ones again
+-- TODO: adapt the system to also ask for a data folder in setup, and provide an alternative to override the data location via command-line, and... Pass it to invader
+--       ... and, add special parsing code to locate and handle the "physics" folder in the data folder
+-- TODO: I cannot test Linux functionality from WSL by calling the Lua executable for Windows, I need to use a Unix-based Lua executable
 
-local new_system_utilities = require("new_system_utilities")
-local new_extractor = require("new_extractor")
-local new_calculator = require("new_calculator")
-local new_parser = require("new_parser")
-local new_exporter = require("new_exporter")
-local new_setup_pmps = require("new_setup_pmps")
+-- Lua is smart enough to figure out slashes in imported module paths without human intervention, and also because "generate_path()" cannot be called here
+-- All module paths are relative to the root folder: this application expects the launcher script to change directory into the project folder, regardless of the starting shell location
+local new_system_utilities = require("./new_system_utilities")
+local new_extractor = require("./new_extractor")
+local new_calculator = require("./new_calculator")
+local new_parser = require("./new_parser")
+local new_exporter = require("./new_exporter")
+local new_setup_pmps = require("./new_setup_pmps")
 
-local dkjson = require("lib/dkjson/dkjson")
+local dkjson = require("./lib/dkjson/dkjson")
 
 -- TODO: arguments that create new types, modify existing types, and restore original types, etc... Will come later
 -- TODO: push this somewhere else... Also, the color text codes are platform-dependent, as far as I know... 
@@ -75,8 +80,7 @@ function setup()
     new_system_utilities.export_settings_json(settings_json)
 end
 
--- TODO: change this variable to "linux" in the Linux branch
-local os_type = new_system_utilities.get_running_os()
+local is_windows_host = new_system_utilities.is_windows_host()
 -- TODO: I put these here because I want an initial check that asks the user to configure paths using -s mode on a first run basis
 -- And print a special colored message asking them to do that when paths haven't been configured
 local settings = new_system_utilities.import_settings()
@@ -143,7 +147,7 @@ for k, v in pairs(arg) do
         end
         -- TODO: a last check to confirm that the file is accessible (or implement in the system utilities module?)
     end
-    -- At this point, the script expects a valid, sufficient argument set to create a tag, all help/interactive mode checks have been passed
+    -- At this point, the script expects a valid, sufficient argument set to create a tag, all help or interactive mode checks have been passed
     if #arg < 3 then
         print("error: invalid or insufficient arguments to create physics tag")
         return 1
@@ -155,6 +159,20 @@ if is_help_mode then
     -- This returns "true" if the settings.json is absent; "no_settings_file" otherwise
     local no_settings_file = settings and true or "no_settings_file"
     print(help_message(no_settings_file))
+
+    -- TEST
+    local muhA = {1, 2, 3, {7, 8, 9}, 5, 6}
+    local encodedMuhA = dkjson.encode(muhA, {
+        indent = true
+    })
+    print(encodedMuhA)
+    new_calculator.jms_units_to_world_units(muhA)
+    local encodedMuhA = dkjson.encode(muhA, {
+        indent = true
+    })
+    print(encodedMuhA)
+    -- END OF TEST
+
     return 0
 end
 
@@ -170,8 +188,8 @@ jms_path = arg[#arg - 1]
 tag_path = arg[#arg]
 
 -- Type check
--- TODO: refactor this and make it system-agnostic (and maybe push it to the system utilities module)
-local available_types = new_system_utilities.get_json_files_in_dir(".\\types")
+-- TODO: maybe push this to the system utilities module
+local available_types = new_system_utilities.get_json_files_in_dir(new_system_utilities.generate_path("./types"))
 local is_valid_type = false
 for i, v in ipairs(available_types) do
     if v == type_name then
@@ -194,7 +212,7 @@ local all_engines = new_parser.import_engines()
 
 -- Mass override check
 if not mass then
-    -- If mass not provided by the user, then uses the mass from the type definition
+    -- If a mass value is not explicitly provided by the user, then uses the mass from the type definition
     mass = type_table.properties.mass
 end
 
@@ -242,4 +260,4 @@ local final_powered_mass_points = new_exporter.FinalPoweredMassPoints(powered_ma
 local final_mass_points = new_exporter.FinalMassPoints(mass_points)
 local create_tag_command = new_exporter.invader_create_tag_command(invader_edit_path, tags_directory, tag_path)
 local fill_tag_commands = new_exporter.invader_fill_tag_command_list(invader_edit_path, tags_directory, tag_path, final_properties, final_inertial_matrices, final_powered_mass_points, final_mass_points)
-new_exporter.export_tag(create_tag_command, fill_tag_commands, os_type)
+new_exporter.export_tag(create_tag_command, fill_tag_commands, is_windows_host)

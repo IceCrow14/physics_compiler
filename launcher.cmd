@@ -2,7 +2,7 @@
 @SET original_directory=%CD%
 @SET root_directory=%~dp0
 @CD %root_directory%
-@REM This works fucking nice! All arguments are passed intact with %*
+@REM All arguments are passed intact with %*
 @REM TODO: on release, replace this Lua call with a call to the .exe file
 @lua new_main.lua %*
 @CD %original_directory%
