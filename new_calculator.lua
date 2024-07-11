@@ -270,15 +270,17 @@ function module.get_parent_jms_node_index(argument_node, jms_node_table)
 end
 
 function module.jms_units_to_world_units(x)
-    -- TODO: I should make this function return a new table, tables are pass by reference and I want these functions to return only new objects, not overwrite original ones
     -- Note that this calculation will be correct only for first order terms (not squared, cubed of otherwise raised to a power other than 1)
     -- For instance, to convert terms expressed in squared JMS units, this function must be called twice on the operand to return squared world units
     local world_units
     if type(x) == "table" then
+        -- This function now returns a new table instead of modifying the argument table
+        -- (tables are pass by reference and I wanted these functions to return new objects only, not overwrite the original ones)
+        local new_table = {}
         for k, v in pairs(x) do
-            x[k] = module.jms_units_to_world_units(v)
+            new_table[k] = module.jms_units_to_world_units(v)
         end
-        return x
+        return new_table
     end
     -- 1 Halo world unit = 100 JMS units = 10 ft = 3.048 m
     world_units = x/100

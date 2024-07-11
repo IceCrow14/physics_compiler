@@ -166,11 +166,15 @@ if is_help_mode then
         indent = true
     })
     print(encodedMuhA)
-    new_calculator.jms_units_to_world_units(muhA)
+    local muhB = new_calculator.jms_units_to_world_units(muhA)
     local encodedMuhA = dkjson.encode(muhA, {
         indent = true
     })
+    local encodedMuhB = dkjson.encode(muhB, {
+        indent = true
+    })
     print(encodedMuhA)
+    print(encodedMuhB)
     -- END OF TEST
 
     return 0
