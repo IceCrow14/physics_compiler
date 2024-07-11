@@ -1,12 +1,14 @@
 -- Physics compiler new main file (On Windows, call this using launcher.cmd! Otherwise, relative paths will fail and everything will break)
 -- * the root directory is accessible through system environment variable "root_directory" (includes the trailing slash)
 -- * The goal is to create a system that is compatible with both Linux and Windows now, for the time being, I will use this file to run tests
--- * It seems I can grab the srlua from the LuaDist GitHub archive! For each OS variation! I may replace my current srlua dependency with each OS's srlua variant
+-- * I may replace my current srlua dependency with each OS's srlua variant
 -- * dkjson's JSON "keyorder" applies in nested tables too
 -- TODO: refresh Git files, remove all cached files (because some of them show up as duplicate in the root folder) and add the current ones again
 -- TODO: adapt the system to also ask for a data folder in setup, and provide an alternative to override the data location via command-line, and... Pass it to invader
 --       ... and, add special parsing code to locate and handle the "physics" folder in the data folder
 -- TODO: I cannot test Linux functionality from WSL by calling the Lua executable for Windows, I need to use a Unix-based Lua executable
+-- TODO: add options to restore standard engine and type definitions
+-- TODO: add support for relative paths from data folder files
 
 -- Lua is smart enough to figure out slashes in imported module paths without human intervention, and also because "generate_path()" cannot be called here
 -- All module paths are relative to the root folder: this application expects the launcher script to change directory into the project folder, regardless of the starting shell location
@@ -159,24 +161,6 @@ if is_help_mode then
     -- This returns "true" if the settings.json is absent; "no_settings_file" otherwise
     local no_settings_file = settings and true or "no_settings_file"
     print(help_message(no_settings_file))
-
-    -- TEST
-    local muhA = {1, 2, 3, {7, 8, 9}, 5, 6}
-    local encodedMuhA = dkjson.encode(muhA, {
-        indent = true
-    })
-    print(encodedMuhA)
-    local muhB = new_calculator.jms_units_to_world_units(muhA)
-    local encodedMuhA = dkjson.encode(muhA, {
-        indent = true
-    })
-    local encodedMuhB = dkjson.encode(muhB, {
-        indent = true
-    })
-    print(encodedMuhA)
-    print(encodedMuhB)
-    -- END OF TEST
-
     return 0
 end
 

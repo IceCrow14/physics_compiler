@@ -5,10 +5,10 @@
 local module = {}
 
 -- TODO: replace the imported module path and name when I rename it
-local calculator = require("new_calculator")
-local system_utilities = require("new_system_utilities")
+local calculator = require("./new_calculator")
+local system_utilities = require("./new_system_utilities")
 
-local dkjson = require("lib\\dkjson\\dkjson")
+local dkjson = require("./lib/dkjson/dkjson")
 
 function module.get_mass_point_table(jms_mass_point_relative_mass_table, jms_mass_point_table, jms_node_table, total_mass, engine_list, powered_mass_point_list)
     local mass_point_table = {}
@@ -140,7 +140,7 @@ end
 
 function module.engine_name_to_engine(name, engines)
     -- Expects an engine name, looks up said name to find a match in the engines table from the designated JSON engines directory
-    -- returns an engine object on success, nil on failure
+    -- Returns an engine object on success, nil on failure
     for k, v in pairs(engines) do
         if v.name == name then
             return v
@@ -246,33 +246,81 @@ function module.parse_key_value_pair(t, k, v)
     return true
 end
 
+-- TODO: delete old function. And consider making a unified "import from folder" function, since this, and import types are very similar.
+--       Same goes for "export", "encode" and "decode" functions
+-- function module.import_engines()
+--     -- Reads all the Engine JSON files from the designated engines directory
+--     local engines = {}
+-- 	if not system_utilities.is_valid_path(".\\engines") then
+-- 		print("error: invalid JSON engines directory")
+-- 		return
+-- 	end
+-- 	local engine_list = system_utilities.get_json_files_in_dir(".\\engines")
+-- 	for k, v in pairs(engine_list) do
+-- 		local engine_path = ".\\engines\\"..v..".json"
+-- 		local engine_file = io.open(engine_path)
+-- 		local content = engine_file:read("*a")
+-- 		engine_file:close()
+--         -- TODO: call "decode_engine" instead of dkjson's decode. Also, create decode_engine function, similarly to decode_type from PMP setup module
+-- 		local object = dkjson.decode(content)
+-- 		engines[v] = object
+-- 	end
+-- 	return engines
+-- end
+
 function module.import_engines()
-    -- Reads all the engine JSON files from the designated engines directory
-    local engines = {}
-	if not system_utilities.is_valid_path(".\\engines") then
-		print("error: invalid JSON engines directory")
+	-- Reads all the Engine JSON files from the designated engines directory
+	local engines = {}
+	local engines_root_path = system_utilities.generate_path("./engines")
+	local engines_list
+	if not system_utilities.is_valid_path(engines_root_path) then
+		print("error: invalid JSON engines directory (missing or inaccessible \"engines\" folder)")
 		return
 	end
-	local engine_list = system_utilities.get_json_files_in_dir(".\\engines")
-	for k, v in pairs(engine_list) do
-		local engine_path = ".\\engines\\"..v..".json"
-		local engine_file = io.open(engine_path)
-		local content = engine_file:read("*a")
-		engine_file:close()
-		local object = dkjson.decode(content)
-		engines[v] = object
+	engines_list = system_utilities.get_json_files_in_dir(engines_root_path)
+	for _, v in pairs(engines_list) do
+		local path = system_utilities.generate_path(engines_root_path, "/", v, ".json")
+		local file = io.open(path)
+		local content
+		local object
+		if not file then
+			print("error: failed to import engine file \""..path.."\"")
+		else
+			content = file:read("*a")
+			file:close()
+			-- TODO: call "decode_type" instead of dkjson's decode
+			object = dkjson.decode(content)
+			-- "v" is the engine and file name without the JSON extension, so the Engine object is stored at key [Engine name]
+			engines[v] = object
+		end
 	end
 	return engines
 end
 
+-- function module.export_standard_engines()
+	-- local standard_engines = module.get_standard_engines()
+	-- for _, engine in pairs(standard_engines) do
+	-- 	local json = module.encode_engine(engine)
+	-- 	local file_name = engine.name
+	-- 	local file_path = "./engines/"..file_name..".json"
+	-- 	local file = io.open(file_path, "w")
+	-- 	if (file) then
+	-- 		file:write(json)
+	-- 		file:close()
+	-- 	end
+	-- end
+-- end
+
 function module.export_standard_engines()
 	local standard_engines = module.get_standard_engines()
-	for _, engine in pairs(standard_engines) do
-		local json = module.encode_engine(engine)
-		local file_name = engine.name
-		local file_path = "./engines/"..file_name..".json"
-		local file = io.open(file_path, "w")
-		if (file) then
+	for _, v in pairs(standard_engines) do
+		local json = module.encode_engine(v)
+		local name = v.name
+		local path = system_utilities.generate_path("./engines/", name, ".json")
+		local file = io.open(path, "w")
+		if not file then
+			print("error: failed to export engine file \""..path.."\"")
+		else
 			file:write(json)
 			file:close()
 		end

@@ -1,47 +1,55 @@
--- TODO: I guess I will use this library to read new types from JSON files in the root folder...
---       export the object functions, they will come in handy. Also add a way to read and validate presets from a file and parse them from valid JSONs
---       import JSON files from a dedicated folder, each individual JSON representing a preset...
--- * REPLACE CD REFERENCES WITH SCRIPT LOCATION REFERENCES! *
--- TODO: this is not system-agnostic...
+-- Powered mass point setup module (name subject to change)
+
+-- This module reads vehicle type definitions from JSON files: a type is composed of a powered mass point set, and a set of global tag properties
+
+-- TODO: Export the object functions, they will come in handy.
+--       Also, add a way to read and validate Type definitions from files, and add exception handling for invalid Type definitions at "import_types()"
 
 local module = {}
 
-local system_utilities = require("new_system_utilities")
+local system_utilities = require("./new_system_utilities")
 
-local dkjson = require("lib\\dkjson\\dkjson")
+local dkjson = require("./lib/dkjson/dkjson")
 
--- TODO: push this and the export thing to system utilities, and fix all references to them
 function module.import_types()
-	-- Reads all the type JSON files from the designated types directory
+	-- Reads all the Type JSON files from the designated types directory
 	local types = {}
-	if not system_utilities.is_valid_path(".\\types") then
-		print("error: invalid JSON types directory")
+	local types_root_path = system_utilities.generate_path("./types")
+	local type_list
+	if not system_utilities.is_valid_path(types_root_path) then
+		print("error: invalid JSON types directory (missing or inaccessible \"types\" folder)")
 		return
 	end
-
-	local type_list = system_utilities.get_json_files_in_dir(".\\types")
-	for k, v in pairs(type_list) do
-		-- print(v)
-		local type_path = ".\\types\\"..v..".json"
-		local type_file = io.open(type_path)
-		local content = type_file:read("*a")
-		type_file:close()
-		local object = dkjson.decode(content)
-		types[v] = object
-		-- table.insert(types, object)
+	type_list = system_utilities.get_json_files_in_dir(types_root_path)
+	for _, v in pairs(type_list) do
+		local path = system_utilities.generate_path(types_root_path, "/", v, ".json")
+		local file = io.open(path)
+		local content
+		local object
+		if not file then
+			print("error: failed to import type file \""..path.."\"")
+		else
+			content = file:read("*a")
+			file:close()
+			-- TODO: call "decode_type" instead of dkjson's decode
+			object = dkjson.decode(content)
+			-- "v" is the type and file name without the JSON extension, so the Type object is stored at key [Type name]
+			types[v] = object
+		end
 	end
-
 	return types
 end
 
 function module.export_standard_types()
 	local standard_types = module.get_standard_types()
-	for _, type in pairs(standard_types) do
-		local json = module.encode_type(type)
-		local file_name = type.name
-		local file_path = "./types/"..file_name..".json"
-		local file = io.open(file_path, "w")
-		if (file) then
+	for _, v in pairs(standard_types) do
+		local json = module.encode_type(v)
+		local name = v.name
+		local path = system_utilities.generate_path("./types/", name, ".json")
+		local file = io.open(path, "w")
+		if not file then
+			print("error: failed to export type file \""..path.."\"")
+		else
 			file:write(json)
 			file:close()
 		end
@@ -49,8 +57,7 @@ function module.export_standard_types()
 end
 
 function module.decode_type(type_json_string)
-	-- Takes a string for argument, just a string straight from a JSON file
-	-- TODO: finish this
+	-- Takes a string for argument, just a type definition JSON string straight from a JSON file
 	local type = dkjson.decode(type_json_string)
 	-- TODO: here, check that the JSON matches a Type definition, and check that each PoweredMassPoint table matches a PoweredMassPoint definition
 	return type
@@ -58,8 +65,8 @@ end
 
 function module.encode_type(type)
 	-- "type" is the object table to be encoded in a string in JSON notation
-	-- * indent adds line breaks and indentations so the output JSON is human-readable and not a bunch of gibberish
-	-- * keyorder is self-explanatory. This order is partially based on the tag-structure, though some keys are arbitrarily defined to account for additional variables from this Lua code
+	-- indent adds line breaks and indentations so the output JSON is human-readable, easily editable, and not a bunch of gibberish
+	-- keyorder is self-explanatory. This order is based on the tag-structure, though some keys are arbitrarily defined to account for nested table ordering
 	local json = dkjson.encode(type, {
         indent = true,
         keyorder = {

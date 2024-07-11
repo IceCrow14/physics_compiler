@@ -6,6 +6,7 @@
 -- TODO: add an optional argument for "stacked get" functions so when this argument is present, they do not compute/extract anything, just return the next block start position
 -- TODO: all these "get count" functions look very similar... Maybe I can merge them into a single one, taking a secondary parameter, like the start position?
 -- TODO: i guess I could also replace all "block_size" constants with a call to get the length of the object definition? but not with #, that's only for numeric index tables...
+-- TODO: make this system-agnostic (if applicable), and remove obsolete, discarded, and complete TODOs
 
 local module = {}
 

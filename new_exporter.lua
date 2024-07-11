@@ -7,11 +7,12 @@
 -- For my, and the user's sanity... Values are quoted automatically in Invader calls; quotes are not necessary in keys because spaces are represented by underscores
 
 -- TODO: maybe add Invader as a Git dependency?... This would save plenty of issues, and let users have an "opt-out" option if they have their own installation of Invader
+-- TODO: make this system-agnostic
 
 local module = {}
 
 -- TODO: replace the imported module path and name when I rename it
-local calculator = require("new_calculator")
+local calculator = require("./new_calculator")
 
 function module.export_tag(create, fill, is_windows_host)
     -- Expects "create" to be the Invader-edit create tag command, and likewise, expects "fill" to be the command list containing "insert" and "set" commands
