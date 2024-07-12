@@ -96,6 +96,7 @@ function module.to_windows_path(unix_path)
     return string.gsub(unix_path, "/", "\\")
 end
 
+-- TODO: add safe access checks to all file I/O operations
 function module.import_settings()
     local file_path = module.generate_path("./settings.json")
     if not module.is_valid_path(file_path) then
@@ -103,6 +104,9 @@ function module.import_settings()
         return
     end
     local file = io.open(file_path)
+    if not file then
+        return
+    end
     local content = file:read("*a")
     file:close()
     local settings = dkjson.decode(content)

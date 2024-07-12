@@ -23,6 +23,7 @@ local dkjson = require("./lib/dkjson/dkjson")
 
 -- TODO: arguments that create new types, modify existing types, and restore original types, etc... Will come later
 -- TODO: push this somewhere else... Also, the color text codes are platform-dependent, as far as I know... 
+-- TODO: this looks ugly, I'm going to just move the multi-line strings outside the function, and improve the formatting
 function help_message(signal)
     local message = [[
 Physics compiler
@@ -39,14 +40,13 @@ Options:
 Arguments:
   - type               Vehicle type from the "types" folder
   - jms_path           JMS source file path and extension
-  - physics_path       Output tag file path and extension
-]]
+  - physics_path       Output tag file path and extension]]
     if signal == "no_settings_file" then
-        message = message..[[ [33m
+        local no_settings_warning = [[
 WARNING: settings.json file not found, if this is your first time running this application, 
-         start over using option -s to enable interactive mode and set up your environment, 
-         you will be required to provide valid paths to use this program. [0m
-]]
+start over using option -s to enable interactive mode and set up your environment, 
+you will be required to provide valid paths to use this program.]]
+        message = message.."\n\n"..new_system_utilities.color_text(no_settings_warning, "yellow")
         return message
     end
     return message
@@ -161,18 +161,6 @@ if is_help_mode then
     -- This returns "true" if the settings.json is absent; "no_settings_file" otherwise
     local no_settings_file = settings and true or "no_settings_file"
     print(help_message(no_settings_file))
-
-    -- TEST
-    local test1 = new_system_utilities.color_text("Hey 1!", "yellow", "bold")
-    local test2 = new_system_utilities.color_text("Hey 2!", "strong_green", "underline")
-    local test3 = new_system_utilities.color_text("Hey 3!", "green", nil)
-    local test4 = new_system_utilities.color_text("Hey 4!", "fake", "inverse")
-    print(test1)
-    print(test2)
-    print(test3)
-    print(test4)
-    -- END OF TEST
-
     return 0
 end
 
