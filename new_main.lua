@@ -9,6 +9,7 @@
 -- TODO: I cannot test Linux functionality from WSL by calling the Lua executable for Windows, I need to use a Unix-based Lua executable
 -- TODO: add options to restore standard engine and type definitions
 -- TODO: add support for relative paths from data folder files
+-- TODO: arguments that create new types, modify existing types, and restore original types, etc... Will come later
 
 -- Lua is smart enough to figure out slashes in imported module paths without human intervention, and also because "generate_path()" cannot be called here
 -- All module paths are relative to the root folder: this application expects the launcher script to change directory into the project folder, regardless of the starting shell location
@@ -18,35 +19,12 @@ local new_calculator = require("./new_calculator")
 local new_parser = require("./new_parser")
 local new_exporter = require("./new_exporter")
 local new_setup_pmps = require("./new_setup_pmps")
-
 local dkjson = require("./lib/dkjson/dkjson")
 
--- TODO: arguments that create new types, modify existing types, and restore original types, etc... Will come later
--- TODO: push this somewhere else... Also, the color text codes are platform-dependent, as far as I know... 
--- TODO: this looks ugly, I'm going to just move the multi-line strings outside the function, and improve the formatting
-function help_message(signal)
-    local message = [[
-Physics compiler
-
-Usage: launcher.cmd [options] <type> <jms_path> <physics_path>
-
-Options:
-  -h                 Shows this help message
-  -s                 Run interactive mode to setup paths and settings
-  -m                 Mass value (overrides the mass value from the vehicle type properties)
-  -i                 Invader-edit path
-  -t                 Tags directory
-
-Arguments:
-  - type               Vehicle type from the "types" folder
-  - jms_path           JMS source file path and extension
-  - physics_path       Output tag file path and extension]]
+function get_help_message(signal, help_message, no_settings_message)
+    local message = help_message
     if signal == "no_settings_file" then
-        local no_settings_warning = [[
-WARNING: settings.json file not found, if this is your first time running this application, 
-start over using option -s to enable interactive mode and set up your environment, 
-you will be required to provide valid paths to use this program.]]
-        message = message.."\n\n"..new_system_utilities.color_text(no_settings_warning, "yellow")
+        message = message.."\n\n"..new_system_utilities.color_text(no_settings_message, "yellow")
         return message
     end
     return message
@@ -82,9 +60,31 @@ function setup()
     new_system_utilities.export_settings_json(settings_json)
 end
 
+-- ===== Startup =====
+-- I put these variables here because I want an initial check that asks the user to configure paths using "-s" mode on a first run basis
+-- And print a special message asking them to do that when paths haven't been configured
+-- The positioning of the closing brackets of these multi-line strings is intentional: this is intended to prevent the script from showing duplicate new line breaks
+local help_message = [[
+Physics compiler
+
+Usage: launcher.cmd [options] <type> <jms_path> <physics_path>
+
+Options:
+  -h                 Shows this help message
+  -s                 Run interactive mode to setup paths and settings
+  -m                 Mass value (overrides the mass value from the vehicle type properties)
+  -i                 Invader-edit path
+  -t                 Tags directory
+
+Arguments:
+  - type               Vehicle type from the "types" folder
+  - jms_path           JMS source file path and extension
+  - physics_path       Output tag file path and extension]]
+local no_settings_message = [[
+WARNING: settings.json file not found, if this is your first time running this application, 
+         start over using option -s to enable interactive mode and set up your environment, 
+         you will be required to provide valid paths to use this program.]]
 local is_windows_host = new_system_utilities.is_windows_host()
--- TODO: I put these here because I want an initial check that asks the user to configure paths using -s mode on a first run basis
--- And print a special colored message asking them to do that when paths haven't been configured
 local settings = new_system_utilities.import_settings()
 local is_help_mode
 local is_setup_mode
@@ -147,7 +147,7 @@ for k, v in pairs(arg) do
             print("error: invalid -t argument (directory does not exist)")
             return 1
         end
-        -- TODO: a last check to confirm that the file is accessible (or implement in the system utilities module?)
+        -- TODO: maybe add a last check to confirm that the file is accessible (or implement in the system utilities module?)
     end
     -- At this point, the script expects a valid, sufficient argument set to create a tag, all help or interactive mode checks have been passed
     if #arg < 3 then
@@ -160,7 +160,7 @@ end
 if is_help_mode then
     -- This returns "true" if the settings.json is absent; "no_settings_file" otherwise
     local no_settings_file = settings and true or "no_settings_file"
-    print(help_message(no_settings_file))
+    print(get_help_message(no_settings_file, help_message, no_settings_message))
     return 0
 end
 
@@ -171,15 +171,17 @@ if is_setup_mode then
 end
 
 -- ===== Standard mode =====
+local available_type_names = new_system_utilities.get_json_files_in_dir(new_system_utilities.generate_path("./types"))
+local available_types
+local available_engines = new_parser.import_engines()
+local is_valid_type = false
+
 type_name = arg[#arg -2]
 jms_path = arg[#arg - 1]
 tag_path = arg[#arg]
 
 -- Type check
--- TODO: maybe push this to the system utilities module
-local available_types = new_system_utilities.get_json_files_in_dir(new_system_utilities.generate_path("./types"))
-local is_valid_type = false
-for i, v in ipairs(available_types) do
+for _, v in ipairs(available_type_names) do
     if v == type_name then
         is_valid_type = true
         break
@@ -189,22 +191,15 @@ if not is_valid_type then
     print("error: invalid type")
     return 1
 end
-local all_types = new_setup_pmps.import_types()
--- TODO: this can be optimized, replace the loop with an attempt to access the value at the indexed key, followed by an if block. Maybe the block above too
-for k, v in pairs(all_types) do
-    if k == type_name then
-        type_table = v
-        break
-    end
-end
-local all_engines = new_parser.import_engines()
+available_types = new_setup_pmps.import_types()
+-- The "available types" check validates that the Type name provided by the user points to an existing Type
+type_table = available_types[type_name]
 
 -- Mass override check
 if not mass then
     -- If a mass value is not explicitly provided by the user, then uses the mass from the type definition
     mass = type_table.properties.mass
 end
-
 if not invader_edit_path then
     -- If not defined by the user from the arguments list, take it from the settings file
     invader_edit_path = settings.invader_edit_path
@@ -231,14 +226,14 @@ powered_mass_points = type_table.pmps
 
 -- ===== Extraction stage =====
 local jms_nodes = new_extractor.get_jms_node_table(jms_path)
--- TODO: remove? JMS materials are irrelevant in this program
+-- We don't save JMS material information because it is irrelevant to this program: if this changes in the future, this is the place to get them
 -- local jms_materials = new_extractor.get_jms_material_table(jms_path)
 local jms_mass_points = new_extractor.get_jms_mass_point_table(jms_path)
 local jms_mass_point_relative_masses = new_calculator.get_jms_mass_point_relative_mass_table(jms_mass_points, "equal")
 -- TODO: rename function to "jms" center of mass vector, and arguments name where required
 local jms_center_of_mass = new_calculator.get_center_of_mass_vector(jms_mass_point_relative_masses, jms_mass_points, jms_nodes)
 -- ===== Processing stage =====
-local mass_points = new_parser.get_mass_point_table(jms_mass_point_relative_masses, jms_mass_points, jms_nodes, mass, all_engines, type_table.pmps)
+local mass_points = new_parser.get_mass_point_table(jms_mass_point_relative_masses, jms_mass_points, jms_nodes, mass, available_engines, type_table.pmps)
 local inertial_matrix = new_calculator.get_inertial_matrix(mass, jms_center_of_mass, jms_mass_point_relative_masses, jms_mass_points, jms_nodes)
 local inverse_inertial_matrix = new_calculator.get_inverse_inertial_matrix(inertial_matrix)
 local moments_vector = new_calculator.get_moments_vector(inertial_matrix)

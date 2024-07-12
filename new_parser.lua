@@ -7,7 +7,6 @@ local module = {}
 -- TODO: replace the imported module path and name when I rename it
 local calculator = require("./new_calculator")
 local system_utilities = require("./new_system_utilities")
-
 local dkjson = require("./lib/dkjson/dkjson")
 
 function module.get_mass_point_table(jms_mass_point_relative_mass_table, jms_mass_point_table, jms_node_table, total_mass, engine_list, powered_mass_point_list)
@@ -59,10 +58,7 @@ function module.get_mass_point_table(jms_mass_point_relative_mass_table, jms_mas
     return mass_point_table
 end
 
--- ===================
 -- ===== Engines =====
--- ===================
-
 function module.purge_name(name)
     -- This sounds ominous, because it is: removes square bracket data from mass point names so Invader and the Halo engine accept them
     -- Mass point names apparently cannot be longer than 32 characters, so this takes care of that

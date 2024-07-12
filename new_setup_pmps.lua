@@ -8,7 +8,6 @@
 local module = {}
 
 local system_utilities = require("./new_system_utilities")
-
 local dkjson = require("./lib/dkjson/dkjson")
 
 function module.import_types()
