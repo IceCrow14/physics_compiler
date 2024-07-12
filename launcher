@@ -1,0 +1,11 @@
+#!/bin/bash
+# This launcher is needed to wrap the main script, so it inherits the directory path from the shell. Lua 5.1 cannot get the script path by itself reliably, and that brings a lot of stability issues
+original_directory=$(pwd)
+# dirname $0 cannot be called directly, or it will return "." when called from the project directory
+# Moving to the parent directory and then printing it allows saving the root directory location
+root_directory=$(cd "$(dirname "$0")" && pwd)
+cd $root_directory
+# All arguments are passed intact with "$@"
+# TODO: on release, replace this Lua call with a call to the .exe file
+lua new_main.lua "$@"
+cd $original_directory

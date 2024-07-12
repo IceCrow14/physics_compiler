@@ -1,5 +1,5 @@
 -- Physics compiler new main file (On Windows, call this using launcher.cmd! Otherwise, relative paths will fail and everything will break)
--- * the root directory is accessible through system environment variable "root_directory" (includes the trailing slash)
+-- On Windows only, the root directory is accessible through local environment variable "root_directory" (includes the trailing slash)
 -- * The goal is to create a system that is compatible with both Linux and Windows now, for the time being, I will use this file to run tests
 -- * I may replace my current srlua dependency with each OS's srlua variant
 -- * dkjson's JSON "keyorder" applies in nested tables too
@@ -67,7 +67,7 @@ end
 local help_message = [[
 Physics compiler
 
-Usage: launcher.cmd [options] <type> <jms_path> <physics_path>
+Usage: launcher[.cmd] [options] <type> <jms_path> <physics_path>
 
 Options:
   -h                 Shows this help message
