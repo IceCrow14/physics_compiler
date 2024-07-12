@@ -161,6 +161,18 @@ if is_help_mode then
     -- This returns "true" if the settings.json is absent; "no_settings_file" otherwise
     local no_settings_file = settings and true or "no_settings_file"
     print(help_message(no_settings_file))
+
+    -- TEST
+    local test1 = new_system_utilities.color_text("Hey 1!", "yellow", "bold")
+    local test2 = new_system_utilities.color_text("Hey 2!", "strong_green", "underline")
+    local test3 = new_system_utilities.color_text("Hey 3!", "green", nil)
+    local test4 = new_system_utilities.color_text("Hey 4!", "fake", "inverse")
+    print(test1)
+    print(test2)
+    print(test3)
+    print(test4)
+    -- END OF TEST
+
     return 0
 end
 
@@ -190,6 +202,7 @@ if not is_valid_type then
     return 1
 end
 local all_types = new_setup_pmps.import_types()
+-- TODO: this can be optimized, replace the loop with an attempt to access the value at the indexed key, followed by an if block. Maybe the block above too
 for k, v in pairs(all_types) do
     if k == type_name then
         type_table = v
