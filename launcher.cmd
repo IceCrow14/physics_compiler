@@ -4,5 +4,5 @@
 @CD %root_directory%
 @REM All arguments are passed intact with %*
 @REM TODO: on release, replace this Lua call with a call to the .exe file
-@lua new_main.lua %*
+@lua main.lua %*
 @CD %original_directory%

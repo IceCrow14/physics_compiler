@@ -5,8 +5,8 @@
 local module = {}
 
 -- TODO: replace the imported module path and name when I rename it
-local calculator = require("./new_calculator")
-local system_utilities = require("./new_system_utilities")
+local calculator = require("./calculator")
+local system_utilities = require("./system_utilities")
 local dkjson = require("./lib/dkjson/dkjson")
 
 function module.get_mass_point_table(jms_mass_point_relative_mass_table, jms_mass_point_table, jms_node_table, total_mass, engine_list, powered_mass_point_list)

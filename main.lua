@@ -8,23 +8,23 @@
 --       ... and, add special parsing code to locate and handle the "physics" folder in the data folder
 -- TODO: I cannot test Linux functionality from WSL by calling the Lua executable for Windows, I need to use a Unix-based Lua executable
 -- TODO: add options to restore standard engine and type definitions
--- TODO: add support for relative paths from data folder files
+-- TODO: add support for relative paths from data folder files (invader-edit in particular has no support for setting a custom data directory using -d )
 -- TODO: arguments that create new types, modify existing types, and restore original types, etc... Will come later
 
 -- Lua is smart enough to figure out slashes in imported module paths without human intervention, and also because "generate_path()" cannot be called here
 -- All module paths are relative to the root folder: this application expects the launcher script to change directory into the project folder, regardless of the starting shell location
-local new_system_utilities = require("./new_system_utilities")
-local new_extractor = require("./new_extractor")
-local new_calculator = require("./new_calculator")
-local new_parser = require("./new_parser")
-local new_exporter = require("./new_exporter")
-local new_setup_pmps = require("./new_setup_pmps")
+local system_utilities = require("./system_utilities")
+local extractor = require("./extractor")
+local calculator = require("./calculator")
+local parser = require("./parser")
+local exporter = require("./exporter")
+local setup_pmps = require("./setup_pmps")
 local dkjson = require("./lib/dkjson/dkjson")
 
 function get_help_message(signal, help_message, no_settings_message)
     local message = help_message
     if signal == "no_settings_file" then
-        message = message.."\n\n"..new_system_utilities.color_text(no_settings_message, "yellow")
+        message = message.."\n\n"..system_utilities.color_text(no_settings_message, "yellow")
         return message
     end
     return message
@@ -42,13 +42,13 @@ function setup()
     settings.data_directory = ""
     repeat
         settings.invader_edit_path = request_input("Enter invader-edit path: ")
-    until new_system_utilities.is_valid_path(settings.invader_edit_path)
+    until system_utilities.is_valid_path(settings.invader_edit_path)
     repeat
         settings.tags_directory = request_input("Enter tags directory: ")
-    until new_system_utilities.is_valid_path(settings.tags_directory)
+    until system_utilities.is_valid_path(settings.tags_directory)
     repeat
         settings.data_directory = request_input("Enter data directory: ")
-    until new_system_utilities.is_valid_path(settings.data_directory)
+    until system_utilities.is_valid_path(settings.data_directory)
     local settings_json = dkjson.encode(settings, {
         indent = true,
         keyorder = {
@@ -57,7 +57,7 @@ function setup()
             "data_directory"
         }
     })
-    new_system_utilities.export_settings_json(settings_json)
+    system_utilities.export_settings_json(settings_json)
 end
 
 -- ===== Startup =====
@@ -74,6 +74,7 @@ Options:
   -s                 Run interactive mode to setup paths and settings
   -m                 Mass value (overrides the mass value from the vehicle type properties)
   -i                 Invader-edit path
+  -d                 Data directory
   -t                 Tags directory
 
 Arguments:
@@ -84,14 +85,12 @@ local no_settings_message = [[
 WARNING: settings.json file not found, if this is your first time running this application, 
          start over using option -s to enable interactive mode and set up your environment, 
          you will be required to provide valid paths to use this program.]]
-local is_windows_host = new_system_utilities.is_windows_host()
-local settings = new_system_utilities.import_settings()
+local is_windows_host = system_utilities.is_windows_host()
+local settings = system_utilities.import_settings()
 local is_help_mode
 local is_setup_mode
 local mass
-local invader_edit_path
-local tags_directory
-local data_directory
+local settings_paths = {}
 local type_name
 local jms_path
 local tag_path
@@ -126,24 +125,45 @@ for k, v in pairs(arg) do
         end
     end
     if v == "-i" then
-        invader_edit_path = arg[k + 1]
+
+        settings_paths.invader_edit_path = arg[k + 1]
+
+        local invader_edit_path = arg[k + 1]
         if not invader_edit_path then
             print("error: invalid -i argument")
             return 1
         end
-        if not new_system_utilities.is_valid_path(invader_edit_path) then
+        if not system_utilities.is_valid_path(invader_edit_path) then
             print("error: invalid -i argument (file does not exist)")
             return 1
         end
         -- TODO: maybe add a last check to confirm that the file is accessible (or implement in the system utilities module?)
     end
+    if v == "-d" then
+
+        settings_paths.data_directory = arg[k + 1]
+
+        local data_directory = arg[k + 1]
+        if not data_directory then
+            print("error: invalid -d argument")
+            return 1
+        end
+        if not system_utilities.is_valid_path(data_directory) then
+            print("error: invalid -d argument (directory does not exist)")
+            return 1
+        end
+        -- TODO: maybe add a last check to confirm that the file is accessible (or implement in the system utilities module?)
+    end
     if v == "-t" then
-        tags_directory = arg[k + 1]
+
+        settings_paths.tags_directory = arg[k + 1]
+
+        local tags_directory = arg[k + 1]
         if not tags_directory then
             print("error: invalid -t argument")
             return 1
         end
-        if not new_system_utilities.is_valid_path(tags_directory) then
+        if not system_utilities.is_valid_path(tags_directory) then
             print("error: invalid -t argument (directory does not exist)")
             return 1
         end
@@ -171,9 +191,9 @@ if is_setup_mode then
 end
 
 -- ===== Standard mode =====
-local available_type_names = new_system_utilities.get_json_files_in_dir(new_system_utilities.generate_path("./types"))
+local available_type_names = system_utilities.get_json_files_in_dir(system_utilities.generate_path("./types"))
 local available_types
-local available_engines = new_parser.import_engines()
+local available_engines = parser.import_engines()
 local is_valid_type = false
 
 type_name = arg[#arg -2]
@@ -191,7 +211,7 @@ if not is_valid_type then
     print("error: invalid type")
     return 1
 end
-available_types = new_setup_pmps.import_types()
+available_types = setup_pmps.import_types()
 -- The "available types" check validates that the Type name provided by the user points to an existing Type
 type_table = available_types[type_name]
 
@@ -200,13 +220,15 @@ if not mass then
     -- If a mass value is not explicitly provided by the user, then uses the mass from the type definition
     mass = type_table.properties.mass
 end
-if not invader_edit_path then
-    -- If not defined by the user from the arguments list, take it from the settings file
-    invader_edit_path = settings.invader_edit_path
+-- If these are not defined by the user from the arguments list, take them from the settings file
+if not settings_paths.invader_edit_path then
+    settings_paths.invader_edit_path = settings.invader_edit_path
 end
-if not tags_directory then
-    -- If not defined by the user from the arguments list, take it from the settings file
-    tags_directory = settings.tags_directory
+if not settings_paths.data_directory then
+    settings_paths.data_directory = settings.data_directory
+end
+if not settings_paths.tags_directory then
+    settings_paths.tags_directory = settings.tags_directory
 end
 
 -- JMS file check
@@ -225,23 +247,24 @@ properties = type_table.properties
 powered_mass_points = type_table.pmps
 
 -- ===== Extraction stage =====
-local jms_nodes = new_extractor.get_jms_node_table(jms_path)
+local jms_nodes = extractor.get_jms_node_table(jms_path)
 -- We don't save JMS material information because it is irrelevant to this program: if this changes in the future, this is the place to get them
--- local jms_materials = new_extractor.get_jms_material_table(jms_path)
-local jms_mass_points = new_extractor.get_jms_mass_point_table(jms_path)
-local jms_mass_point_relative_masses = new_calculator.get_jms_mass_point_relative_mass_table(jms_mass_points, "equal")
+-- local jms_materials = extractor.get_jms_material_table(jms_path)
+local jms_mass_points = extractor.get_jms_mass_point_table(jms_path)
+local jms_mass_point_relative_masses = calculator.get_jms_mass_point_relative_mass_table(jms_mass_points, "equal")
 -- TODO: rename function to "jms" center of mass vector, and arguments name where required
-local jms_center_of_mass = new_calculator.get_center_of_mass_vector(jms_mass_point_relative_masses, jms_mass_points, jms_nodes)
+local jms_center_of_mass = calculator.get_center_of_mass_vector(jms_mass_point_relative_masses, jms_mass_points, jms_nodes)
 -- ===== Processing stage =====
-local mass_points = new_parser.get_mass_point_table(jms_mass_point_relative_masses, jms_mass_points, jms_nodes, mass, available_engines, type_table.pmps)
-local inertial_matrix = new_calculator.get_inertial_matrix(mass, jms_center_of_mass, jms_mass_point_relative_masses, jms_mass_points, jms_nodes)
-local inverse_inertial_matrix = new_calculator.get_inverse_inertial_matrix(inertial_matrix)
-local moments_vector = new_calculator.get_moments_vector(inertial_matrix)
+local mass_points = parser.get_mass_point_table(jms_mass_point_relative_masses, jms_mass_points, jms_nodes, mass, available_engines, type_table.pmps)
+local inertial_matrix = calculator.get_inertial_matrix(mass, jms_center_of_mass, jms_mass_point_relative_masses, jms_mass_points, jms_nodes)
+local inverse_inertial_matrix = calculator.get_inverse_inertial_matrix(inertial_matrix)
+local moments_vector = calculator.get_moments_vector(inertial_matrix)
 -- ===== Final stage =====
-local final_properties = new_exporter.FinalProperties(properties, jms_center_of_mass, moments_vector, mass)
-local final_inertial_matrices = new_exporter.FinalInertialMatrixAndInverse(inertial_matrix, inverse_inertial_matrix)
-local final_powered_mass_points = new_exporter.FinalPoweredMassPoints(powered_mass_points)
-local final_mass_points = new_exporter.FinalMassPoints(mass_points)
-local create_tag_command = new_exporter.invader_create_tag_command(invader_edit_path, tags_directory, tag_path)
-local fill_tag_commands = new_exporter.invader_fill_tag_command_list(invader_edit_path, tags_directory, tag_path, final_properties, final_inertial_matrices, final_powered_mass_points, final_mass_points)
-new_exporter.export_tag(create_tag_command, fill_tag_commands, is_windows_host)
+local final_properties = exporter.FinalProperties(properties, jms_center_of_mass, moments_vector, mass)
+local final_inertial_matrices = exporter.FinalInertialMatrixAndInverse(inertial_matrix, inverse_inertial_matrix)
+local final_powered_mass_points = exporter.FinalPoweredMassPoints(powered_mass_points)
+local final_mass_points = exporter.FinalMassPoints(mass_points)
+local create_tag_command = exporter.invader_create_tag_command(settings_paths, tag_path)
+local fill_tag_commands = exporter.invader_fill_tag_command_list(settings_paths, tag_path, final_properties, final_inertial_matrices, final_powered_mass_points, final_mass_points)
+
+exporter.export_tag(create_tag_command, fill_tag_commands, is_windows_host)

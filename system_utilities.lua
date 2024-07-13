@@ -96,10 +96,11 @@ function module.to_windows_path(unix_path)
     return string.gsub(unix_path, "/", "\\")
 end
 
--- TODO: add safe access checks to all file I/O operations
+-- TODO: add safe access checks to all file I/O operations (that require it)
 function module.import_settings()
     local file_path = module.generate_path("./settings.json")
     if not module.is_valid_path(file_path) then
+        -- I disabled this because otherwise this would pop-up as an error when settings haven't been defined
         -- print("error: failed to import settings from JSON file (invalid path)")
         return
     end

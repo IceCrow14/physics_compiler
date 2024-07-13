@@ -12,10 +12,11 @@
 local module = {}
 
 -- TODO: replace the imported module path and name when I rename it
-local calculator = require("./new_calculator")
+local calculator = require("./calculator")
+local system_utilities = require("./system_utilities")
 
 function module.export_tag(create, fill, is_windows_host)
-    -- Expects "create" to be the Invader-edit create tag command, and likewise, expects "fill" to be the command list containing "insert" and "set" commands
+    -- Expects "create" to be the Invader-edit create tag command, and likewise, expects "fill" to be the command table containing "insert" and "set" commands
     -- All these commands are expected to be system-agnostic: system-specific subroutines will handle calling them based on the running OS
 
     -- TODO: no, eff' it. I'll have separate functions for each OS, I don't want this to be overly intrusive and cause issues related to weird edge cases
@@ -26,7 +27,6 @@ function module.export_tag(create, fill, is_windows_host)
     -- local is_linux = os.execute("@uname")
     -- local is_windows_host = os.execute("@ver")
 
-    -- TODO: test both of these using the executables: both of them
     -- TODO: maybe add exit code in return statements, and pass it as the main command's exit code?
     if (not is_windows_host) then
         print("Exporting tag in Linux... ")
@@ -45,11 +45,9 @@ function module.export_tag(create, fill, is_windows_host)
         os.execute("CALL "..v)
     end
     return
-    -- print("Attempt to call export_tag without specifying an OS... ")
-    -- return
 end
 
-function module.invader_fill_tag_command_list(invader_edit_path, tags_directory, tag_path, final_properties, final_matrices, final_powered_mass_points, final_mass_points)
+function module.invader_fill_tag_command_list(settings_paths, tag_path, final_properties, final_matrices, final_powered_mass_points, final_mass_points)
     -- TODO: fix the comments
     -- This function runs Invader multiple times, once for every tag field that is written to the tag
     -- This sacrifices memory in favor of compatibility on multiple OS's... Until I develop something more efficient, if ever necessary
@@ -57,13 +55,12 @@ function module.invader_fill_tag_command_list(invader_edit_path, tags_directory,
     -- tag_path is relative to the tags directory (it seems it can be also specified as an absolute path, or relative to the current directory)
     -- Structs must be created using "insert" commands before attempting to fill in tag data, this includes matrix blocks, PMP blocks, and mass point blocks
     -- Returns a standard numbered table that starts with index 1 and is iterable in ascending order with "ipairs()"
-
     local command_list = {}
     local command
     -- Properties
     for k, v in pairs(final_properties) do
         -- Properties do not contain nested fields, so their keys can be used right away, there's no need to calculate root keys for them
-        module.get_invader_set_command_list(invader_edit_path, tags_directory, tag_path, k, v, command_list)
+        module.get_invader_set_command_list(settings_paths, tag_path, k, v, command_list)
     end
     -- Inertial matrices
     -- (Get struct count)
@@ -73,12 +70,12 @@ function module.invader_fill_tag_command_list(invader_edit_path, tags_directory,
         matrix_count = matrix_count + 1
     end
     -- (Insert structs command)
-    command = module.invader_insert_command(invader_edit_path, tags_directory, tag_path, "inertial_matrix_and_inverse", matrix_count)
+    command = module.invader_insert_command(settings_paths, tag_path, "inertial_matrix_and_inverse", matrix_count)
     table.insert(command_list, command)
     -- (Set commands)
     for k, v in pairs(final_matrices) do
         local root_key = "inertial_matrix_and_inverse["..k.."].matrix"
-        module.get_invader_set_command_list(invader_edit_path, tags_directory, tag_path, root_key, v, command_list)
+        module.get_invader_set_command_list(settings_paths, tag_path, root_key, v, command_list)
     end
     -- Powered mass points
     -- (Get struct count)
@@ -87,12 +84,12 @@ function module.invader_fill_tag_command_list(invader_edit_path, tags_directory,
         powered_mass_point_count = powered_mass_point_count + 1
     end
     -- (Insert structs command)
-    command = module.invader_insert_command(invader_edit_path, tags_directory, tag_path, "powered_mass_points", powered_mass_point_count)
+    command = module.invader_insert_command(settings_paths, tag_path, "powered_mass_points", powered_mass_point_count)
     table.insert(command_list, command)
     -- (Set commands)
     for k, v in pairs(final_powered_mass_points) do
         local root_key = "powered_mass_points["..k.."]"
-        module.get_invader_set_command_list(invader_edit_path, tags_directory, tag_path, root_key, v, command_list)
+        module.get_invader_set_command_list(settings_paths, tag_path, root_key, v, command_list)
     end
     -- Mass points
     -- (Get struct count)
@@ -101,72 +98,76 @@ function module.invader_fill_tag_command_list(invader_edit_path, tags_directory,
         mass_point_count = mass_point_count + 1
     end
     -- (Insert structs command)
-    command = module.invader_insert_command(invader_edit_path, tags_directory, tag_path, "mass_points", mass_point_count)
+    command = module.invader_insert_command(settings_paths, tag_path, "mass_points", mass_point_count)
     table.insert(command_list, command)
     -- (Set commands)
     for k, v in pairs(final_mass_points) do
         local root_key = "mass_points["..k.."]"
-        module.get_invader_set_command_list(invader_edit_path, tags_directory, tag_path, root_key, v, command_list)
+        module.get_invader_set_command_list(settings_paths, tag_path, root_key, v, command_list)
     end
     return command_list
 end
 
-function module.get_invader_set_command_list(invader_edit_path, tags_directory, tag_path, key, value, destination)
-    -- Takes an object or table of fields to be set with Invader-edit set commands (in argument "value")
+function module.get_invader_set_command_list(settings_paths, tag_path, key, value, destination)
+    -- Takes an object or table of fields to be set with Invader-edit "set" commands (in argument "value")
     -- Expects all the self-explanatory arguments, in addition to a "destination" table where all commands originated from this function are inserted
     -- The purpose of this table is to collect all the commands, regardless of the nested table they come from, in a single place, so they can be accessed by a standard k/v loop
-    local command
+    local command = {}
     if type(value) == "table" then
         local new_key
         for child_key, child_value in pairs(value) do
             new_key = key.."."..child_key
-            module.get_invader_set_command_list(invader_edit_path, tags_directory, tag_path, new_key, child_value, destination)
+            module.get_invader_set_command_list(settings_paths, tag_path, new_key, child_value, destination)
         end
         return
     end
-    command = add_quotes(invader_edit_path).." -t "..add_quotes(tags_directory).." -n -S "..key.." "..add_quotes(value).." "..add_quotes(tag_path)
+    table.insert(command, system_utilities.add_quotes(settings_paths.invader_edit_path))
+    -- table.insert(command, "-d")
+    -- table.insert(command, system_utilities.add_quotes(settings_paths.data_directory))
+    table.insert(command, "-t")
+    table.insert(command, system_utilities.add_quotes(settings_paths.tags_directory))
+    table.insert(command, "-n")
+    table.insert(command, "-S")
+    table.insert(command, key)
+    table.insert(command, system_utilities.add_quotes(value))
+    table.insert(command, system_utilities.add_quotes(tag_path))
+    command = table.concat(command, " ")
     table.insert(destination, command)
     return
 end
 
---[[function module.InvaderSetCommand(invader_edit_path, tags_directory, tag_path, key, value)
-    -- TODO: deprecate and remove this shit
-    -- TODO: maybe create an alternate recursive function that pushes the recursive commands to a provided table, instead or returning nested tables? 
-    -- Creates an Invader-edit set command with no safeguards (-n -S)
-    -- Is recursive, returns recursive tables containing commands for child keys (trees?) if the field (value) is a table
-    local command
-    if type(value) == "table" then
-        local command_list = {}
-        local new_key
-        for child_key, child_value in pairs(value) do
-            new_key = key.."."..child_key
-            command = module.InvaderSetCommand(invader_edit_path, tags_directory, tag_path, new_key, child_value)
-            table.insert(command_list, command)
-        end
-        return command_list
-    end
-    command = add_quotes(invader_edit_path).." -t "..add_quotes(tags_directory).." -n -S "..key.." "..add_quotes(value).." "..add_quotes(tag_path)
-    return command
-end]]
-
-function module.invader_insert_command(invader_edit_path, tags_directory, tag_path, key, count)
-    -- Returns an Invader-edit insert structs command, not recursive
-    local command = add_quotes(invader_edit_path).." -t "..add_quotes(tags_directory).." -I "..key.." "..count.." end "..add_quotes(tag_path)
+function module.invader_insert_command(settings_paths, tag_path, key, count)
+    -- Returns an Invader-edit "insert structs" command string
+    local command = {}
+    table.insert(command, system_utilities.add_quotes(settings_paths.invader_edit_path))
+    -- table.insert(command, "-d")
+    -- table.insert(command, system_utilities.add_quotes(settings_paths.data_directory))
+    table.insert(command, "-t")
+    table.insert(command, system_utilities.add_quotes(settings_paths.tags_directory))
+    table.insert(command, "-I")
+    table.insert(command, key)
+    table.insert(command, count)
+    table.insert(command, "end")
+    table.insert(command, system_utilities.add_quotes(tag_path))
+    command = table.concat(command, " ")
     return command
 end
 
-function module.invader_create_tag_command(invader_edit_path, tags_directory, tag_path)
+function module.invader_create_tag_command(settings_paths, tag_path)
     -- TODO: right now, the default is that this command overwrites the existing tag if it exists; address this and make it interactive, I guess. This is low priority, though
     -- * tag_path is relative to the tags directory; the "current directory" of the relative tags path can be referenced with "." even, or using absolute paths
-    -- Note: this script contains the "subroutine" code only, this must be called by a subroutine as a CALL in Windows, or as a function in Linux (at least, in Bash)
-    -- TODO: I won't bother fixing ugly paths here (nevermind! I will), let users sort it out by adding quotes when using path names with spaces. No. They still have to quote their stuff, but regardless, this is necessary
-    local command = add_quotes(invader_edit_path).." -t "..add_quotes(tags_directory).." -N "..add_quotes(tag_path)
+    -- Returns an Invader-edit "create tag" command string
+    -- On Windows, this command must be run using CALL because the executable is in quotes
+    local command = {}
+    table.insert(command, system_utilities.add_quotes(settings_paths.invader_edit_path))
+    -- table.insert(command, " -d ")
+    -- table.insert(command, system_utilities.add_quotes(settings_paths.data_directory))
+    table.insert(command, " -t ")
+    table.insert(command, system_utilities.add_quotes(settings_paths.tags_directory))
+    table.insert(command, " -N ")
+    table.insert(command, system_utilities.add_quotes(tag_path))
+    command = table.concat(command)
     return command
-end
-
-function add_quotes(x)
-    -- TODO: add "module" prefix, and replace wherever this is called
-    return "\""..x.."\""
 end
 
 function module.FinalMassPoints(mass_points)

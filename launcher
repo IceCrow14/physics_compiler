@@ -7,5 +7,5 @@ root_directory=$(cd "$(dirname "$0")" && pwd)
 cd $root_directory
 # All arguments are passed intact with "$@"
 # TODO: on release, replace this Lua call with a call to the .exe file
-lua new_main.lua "$@"
+lua main.lua "$@"
 cd $original_directory
