@@ -7,6 +7,32 @@ local module = {}
 
 local dkjson = require("./lib/dkjson/dkjson")
 
+function module.add_physics_directory(path)
+    -- This function adds the "physics" subdirectory right before the file name to the given path
+    -- Returns nil on failure
+    -- The argument path is converted to a Unix path for consistency and to make processing easier; the output is a properly generated path
+    local work_path = module.to_unix_path(path)
+    local unix_dash = "/"
+    local last_dash_index
+    local new_path
+    for i = #work_path, 1, -1 do
+        local character = string.sub(work_path, i, i)
+        if character == unix_dash then
+            last_dash_index = i
+            break
+        end
+    end
+    if not last_dash_index then
+        return
+    end
+    local new_path = {}
+    table.insert(new_path, string.sub(work_path, 1, last_dash_index - 1))
+    table.insert(new_path, "/physics/")
+    table.insert(new_path, string.sub(work_path, last_dash_index + 1, #work_path))
+    new_path = table.concat(new_path)
+    return module.generate_path(new_path)
+end
+
 function module.color_text(text, color, style)
     -- Expects a text string, and optionally, a color and a style
     -- Returns a string with special ANSI escape sequences for coloring and styling text (invalid color or style names are ignored)
@@ -193,7 +219,6 @@ function module.is_windows_host()
 end
 
 function module.add_quotes(x)
-    -- TODO: I already defined this function somewhere else... Maybe I can have that other module import the function from here
     return "\""..x.."\""
 end
 

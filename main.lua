@@ -9,6 +9,10 @@
 -- TODO: I cannot test Linux functionality from WSL by calling the Lua executable for Windows, I need to use a Unix-based Lua executable
 -- TODO: add options to restore standard engine and type definitions
 -- TODO: add support for relative paths from data folder files (invader-edit in particular has no support for setting a custom data directory using -d )
+
+-- TODO: add logic to turn convert relative settings paths into absolute settings paths: this is intended to allow users to enter paths relative to the tags and data folders, respectively
+--       the alternative is to disallow absolute paths in JMS paths and output tag paths... By appending root paths always
+
 -- TODO: arguments that create new types, modify existing types, and restore original types, etc... Will come later
 
 -- Lua is smart enough to figure out slashes in imported module paths without human intervention, and also because "generate_path()" cannot be called here
@@ -181,6 +185,15 @@ if is_help_mode then
     -- This returns "true" if the settings.json is absent; "no_settings_file" otherwise
     local no_settings_file = settings and true or "no_settings_file"
     print(get_help_message(no_settings_file, help_message, no_settings_message))
+
+    -- TEST
+    local path = "C:\\All\\Halo\\tags\\vehicles\\beetle\\beetle.jms"
+    local new_path = system_utilities.add_physics_directory(path)
+    print("CALLED 'ADD PHYSICS DIRECTORY':")
+    print("- ", path)
+    print("- ", new_path)
+    -- END OF TEST
+
     return 0
 end
 
