@@ -10,6 +10,8 @@
 -- TODO: add options to restore standard engine and type definitions
 -- TODO: add support for relative paths from data folder files (invader-edit in particular has no support for setting a custom data directory using -d )
 
+-- TODO: verify that the srlua for Ubuntu/Linux works properly and compiles based on Lua 5.1 rather than Lua 5.2, otherwise, fix that too
+
 -- TODO: add logic to turn convert relative settings paths into absolute settings paths: this is intended to allow users to enter paths relative to the tags and data folders, respectively
 --       the alternative is to disallow absolute paths in JMS paths and output tag paths... By appending root paths always
 
