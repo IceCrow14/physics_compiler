@@ -185,15 +185,6 @@ if is_help_mode then
     -- This returns "true" if the settings.json is absent; "no_settings_file" otherwise
     local no_settings_file = settings and true or "no_settings_file"
     print(get_help_message(no_settings_file, help_message, no_settings_message))
-
-    -- TEST
-    local path = "C:\\All\\Halo\\tags\\vehicles\\beetle\\beetle.jms"
-    local new_path = system_utilities.add_physics_directory(path)
-    print("CALLED 'ADD PHYSICS DIRECTORY':")
-    print("- ", path)
-    print("- ", new_path)
-    -- END OF TEST
-
     return 0
 end
 
