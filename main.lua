@@ -187,6 +187,19 @@ if is_help_mode then
     -- This returns "true" if the settings.json is absent; "no_settings_file" otherwise
     local no_settings_file = settings and true or "no_settings_file"
     print(get_help_message(no_settings_file, help_message, no_settings_message))
+
+    -- TEST
+    local path1 = "/path/to/whatever/dumb.exe"
+    local path2 = "/path/to/whatever/dumb"
+    local path3 = "/path/to/whatever/dumb/"
+    local p1 = system_utilities.get_parent_directory(path1)
+    local p2 = system_utilities.get_parent_directory(path2)
+    local p3 = system_utilities.get_parent_directory(path3)
+    print(path1, p1)
+    print(path2, p2)
+    print(path3, p3)
+    -- END OF TEST
+
     return 0
 end
 
@@ -201,10 +214,7 @@ local available_type_names = system_utilities.get_json_files_in_dir(system_utili
 local available_types
 local available_engines = parser.import_engines()
 local is_valid_type = false
-
 type_name = arg[#arg -2]
-jms_path = arg[#arg - 1]
-tag_path = arg[#arg]
 
 -- Type check
 for _, v in ipairs(available_type_names) do
@@ -221,7 +231,7 @@ available_types = setup_pmps.import_types()
 -- The "available types" check validates that the Type name provided by the user points to an existing Type
 type_table = available_types[type_name]
 
--- Mass override check
+-- Overrides check
 if not mass then
     -- If a mass value is not explicitly provided by the user, then uses the mass from the type definition
     mass = type_table.properties.mass
@@ -238,6 +248,7 @@ if not settings_paths.tags_directory then
 end
 
 -- JMS file check
+jms_path = system_utilities.generate_path(settings_paths.data_directory, "/", arg[#arg - 1])
 local jms_file = io.open(jms_path, "r")
 if not jms_file then
     print("error: invalid JMS file")
@@ -245,7 +256,14 @@ if not jms_file then
 end
 
 -- Physics path check
--- TODO: add a check here to protect the user from doing something dumb such as passing an invalid output tag path, and getting a flood of error messages from Invader
+-- This should protect the user from doing something dumb such as passing an invalid output tag path, and getting a flood of error messages from Invader
+tag_path = system_utilities.generate_path(settings_paths.tags_directory, "/", arg[#arg])
+local tag_parent_directory = system_utilities.get_parent_directory(tag_path)
+local is_valid_tag_parent_directory = system_utilities.is_valid_path(tag_parent_directory)
+if not is_valid_tag_parent_directory then
+    print("error: invalid output tag path, parent directory \""..is_valid_tag_parent_directory.."\" is not valid")
+    return 1
+end
 
 -- Properties
 properties = type_table.properties

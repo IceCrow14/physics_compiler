@@ -7,6 +7,26 @@ local module = {}
 
 local dkjson = require("./lib/dkjson/dkjson")
 
+function module.get_parent_directory(path)
+    -- Returns the parent directory of a given path; nil on failure
+    -- Expects a file or directory path without a trailing slash, otherwise this will return the same path (minus the last slash)
+    -- The argument path is converted to a Unix path for consistency and to make processing easier; the output is a properly generated path
+    local work_path = module.to_unix_path(path)
+    local unix_dash = "/"
+    local last_dash_index
+    for i = #work_path, 1, -1 do
+        local character = string.sub(work_path, i, i)
+        if character == unix_dash then
+            last_dash_index = i
+            break
+        end
+    end
+    if not last_dash_index then
+        return
+    end
+    return module.generate_path(string.sub(work_path, 1, last_dash_index - 1))
+end
+
 function module.add_physics_directory(path)
     -- This function adds the "physics" subdirectory right before the file name to the given path
     -- Returns nil on failure
