@@ -187,19 +187,6 @@ if is_help_mode then
     -- This returns "true" if the settings.json is absent; "no_settings_file" otherwise
     local no_settings_file = settings and true or "no_settings_file"
     print(get_help_message(no_settings_file, help_message, no_settings_message))
-
-    -- TEST
-    local path1 = "/path/to/whatever/dumb.exe"
-    local path2 = "/path/to/whatever/dumb"
-    local path3 = "/path/to/whatever/dumb/"
-    local p1 = system_utilities.get_parent_directory(path1)
-    local p2 = system_utilities.get_parent_directory(path2)
-    local p3 = system_utilities.get_parent_directory(path3)
-    print(path1, p1)
-    print(path2, p2)
-    print(path3, p3)
-    -- END OF TEST
-
     return 0
 end
 
