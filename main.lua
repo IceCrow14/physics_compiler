@@ -1,20 +1,15 @@
 -- Physics compiler new main file (On Windows, call this using launcher.cmd! Otherwise, relative paths will fail and everything will break)
 -- On Windows only, the root directory is accessible through local environment variable "root_directory" (includes the trailing slash)
--- * The goal is to create a system that is compatible with both Linux and Windows now, for the time being, I will use this file to run tests
--- * I may replace my current srlua dependency with each OS's srlua variant
--- * dkjson's JSON "keyorder" applies in nested tables too
--- TODO: refresh Git files, remove all cached files (because some of them show up as duplicate in the root folder) and add the current ones again
--- TODO: adapt the system to also ask for a data folder in setup, and provide an alternative to override the data location via command-line, and... Pass it to invader
---       ... and, add special parsing code to locate and handle the "physics" folder in the data folder
+-- dkjson JSON "keyorder" applies in nested tables too
+-- Expects argument paths to be relative to the data and tags directories, respectively. Absolute paths for JMS and physics paths not allowed anymore
+-- (invader-edit in particular has no support for setting a custom data directory using -d, so paths are processed in this script)
+-- Relative paths can have outer quotes as long as they are paired, and they can be written either with or without navigation references such as "./" or "./.."
+-- Known bug: even though you might feel tempted to, do not stack multiple varying levels of quotes, or weird stuff will happen: arguments will not be passed correctly
+
+-- TODO: add special parsing code to locate and handle the "physics" folder in the data folder
 -- TODO: I cannot test Linux functionality from WSL by calling the Lua executable for Windows, I need to use a Unix-based Lua executable
 -- TODO: add options to restore standard engine and type definitions
--- TODO: add support for relative paths from data folder files (invader-edit in particular has no support for setting a custom data directory using -d )
-
 -- TODO: verify that the srlua for Ubuntu/Linux works properly and compiles based on Lua 5.1 rather than Lua 5.2, otherwise, fix that too
-
--- TODO: add logic to turn convert relative settings paths into absolute settings paths: this is intended to allow users to enter paths relative to the tags and data folders, respectively
---       the alternative is to disallow absolute paths in JMS paths and output tag paths... By appending root paths always
-
 -- TODO: arguments that create new types, modify existing types, and restore original types, etc... Will come later
 
 -- Lua is smart enough to figure out slashes in imported module paths without human intervention, and also because "generate_path()" cannot be called here
@@ -131,9 +126,7 @@ for k, v in pairs(arg) do
         end
     end
     if v == "-i" then
-
         settings_paths.invader_edit_path = arg[k + 1]
-
         local invader_edit_path = arg[k + 1]
         if not invader_edit_path then
             print("error: invalid -i argument")
@@ -143,12 +136,9 @@ for k, v in pairs(arg) do
             print("error: invalid -i argument (file does not exist)")
             return 1
         end
-        -- TODO: maybe add a last check to confirm that the file is accessible (or implement in the system utilities module?)
     end
     if v == "-d" then
-
         settings_paths.data_directory = arg[k + 1]
-
         local data_directory = arg[k + 1]
         if not data_directory then
             print("error: invalid -d argument")
@@ -158,12 +148,9 @@ for k, v in pairs(arg) do
             print("error: invalid -d argument (directory does not exist)")
             return 1
         end
-        -- TODO: maybe add a last check to confirm that the file is accessible (or implement in the system utilities module?)
     end
     if v == "-t" then
-
         settings_paths.tags_directory = arg[k + 1]
-
         local tags_directory = arg[k + 1]
         if not tags_directory then
             print("error: invalid -t argument")
@@ -173,7 +160,6 @@ for k, v in pairs(arg) do
             print("error: invalid -t argument (directory does not exist)")
             return 1
         end
-        -- TODO: maybe add a last check to confirm that the file is accessible (or implement in the system utilities module?)
     end
     -- At this point, the script expects a valid, sufficient argument set to create a tag, all help or interactive mode checks have been passed
     if #arg < 3 then
@@ -235,20 +221,26 @@ if not settings_paths.tags_directory then
 end
 
 -- JMS file check
-jms_path = system_utilities.generate_path(settings_paths.data_directory, "/", arg[#arg - 1])
+jms_path = system_utilities.generate_path(system_utilities.remove_path_quotes(settings_paths.data_directory), "/", system_utilities.remove_path_quotes(arg[#arg - 1]))
 local jms_file = io.open(jms_path, "r")
 if not jms_file then
-    print("error: invalid JMS file")
+    -- print("error: invalid JMS file")
+    print("error: invalid JMS file \""..jms_path.."\"")
     return 1
 end
 
 -- Physics path check
 -- This should protect the user from doing something dumb such as passing an invalid output tag path, and getting a flood of error messages from Invader
-tag_path = system_utilities.generate_path(settings_paths.tags_directory, "/", arg[#arg])
+-- TODO: add logic to handle incorrect output file extensions, or add logic to handle extensions automatically
+tag_path = system_utilities.generate_path(system_utilities.remove_path_quotes(settings_paths.tags_directory), "/", system_utilities.remove_path_quotes(arg[#arg]))
 local tag_parent_directory = system_utilities.get_parent_directory(tag_path)
 local is_valid_tag_parent_directory = system_utilities.is_valid_path(tag_parent_directory)
 if not is_valid_tag_parent_directory then
-    print("error: invalid output tag path, parent directory \""..is_valid_tag_parent_directory.."\" is not valid")
+    print("error: invalid output tag path, parent directory \""..tag_parent_directory.."\" is not valid")
+    return 1
+end
+if not (string.sub(tag_path, -8, -1) == ".physics") then
+    print("error: invalid output tag path, path missing \".physics\" file extension")
     return 1
 end
 

@@ -7,6 +7,16 @@ local module = {}
 
 local dkjson = require("./lib/dkjson/dkjson")
 
+function module.remove_path_quotes(path)
+    -- Removes pairs of outer quotes from file and directory paths, yes, even stacked quotes
+    local first = string.sub(path, 1, 1)
+    local last = string.sub(path, #path, #path)
+    if not (first == "\"" and last == "\"") then
+        return path
+    end
+    return module.remove_path_quotes(string.sub(path, 2, #path - 1))
+end
+
 function module.get_parent_directory(path)
     -- Returns the parent directory of a given path; nil on failure
     -- Expects a file or directory path without a trailing slash, otherwise this will return the same path (minus the last slash)
@@ -151,6 +161,7 @@ function module.import_settings()
         return
     end
     local file = io.open(file_path)
+    -- Now I see why this was throwing an error even after passing the "valid path" check
     if not file then
         return
     end
@@ -224,9 +235,10 @@ function module.is_valid_path(path)
     end
     -- Returns 0 on success, otherwise returns a non-zero exit code (this works the same on either OS)
     if (file_exists == 0) then
-        file_exists = true
+        return true
     end
-    return file_exists
+    -- Do not return the "file exists" exit code, if it is 1 or anything other than "false" or "nil", it evaluates as true
+    return
 end
 
 function module.is_windows_host()
