@@ -9,7 +9,6 @@
 -- TODO: add special parsing code to locate and handle the "physics" folder in the data folder
 -- TODO: I cannot test Linux functionality from WSL by calling the Lua executable for Windows, I need to use a Unix-based Lua executable
 -- TODO: add options to restore standard engine and type definitions
--- TODO: verify that the srlua for Ubuntu/Linux works properly and compiles based on Lua 5.1 rather than Lua 5.2, otherwise, fix that too
 -- TODO: arguments that create new types, modify existing types, and restore original types, etc... Will come later
 
 -- Lua is smart enough to figure out slashes in imported module paths without human intervention, and also because "generate_path()" cannot be called here
@@ -246,12 +245,12 @@ end
 
 -- Properties
 properties = type_table.properties
--- Oopsie here... I don't want shortened names anywhere other than absolutely necessary
+-- Oopsie here... I don't want shortened names anywhere other than where absolutely necessary
 powered_mass_points = type_table.pmps
 
 -- ===== Extraction stage =====
 local jms_nodes = extractor.get_jms_node_table(jms_path)
--- We don't save JMS material information because it is irrelevant to this program: if this changes in the future, this is the place to get them
+-- We don't save JMS material information because it is irrelevant to this program: if this changes in the future, this is the place to get it
 -- local jms_materials = extractor.get_jms_material_table(jms_path)
 local jms_mass_points = extractor.get_jms_mass_point_table(jms_path)
 local jms_mass_point_relative_masses = calculator.get_jms_mass_point_relative_mass_table(jms_mass_points, "equal")

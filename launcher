@@ -3,10 +3,14 @@
 # With this launcher, you can start the program from any location, as long as remains in the project root folder
 original_directory=$(pwd)
 # dirname $0 cannot be called directly, or it will return "." when called from the project directory
-# Moving to the parent directory and then printing it allows saving the root directory location
+# Moving to the parent directory and then printing it allows saving the full root directory location to a variable
 root_directory=$(cd "$(dirname "$0")" && pwd)
 cd $root_directory
 # All arguments are passed intact with "$@"
-# TODO: on release, replace this Lua call with a call to the .exe file
-lua main.lua "$@"
+# In Unix-like systems, you must customize this variable to point to a valid Lua 5.1 interpreter, either:
+# - Installed from a package manager
+# - Downloaded as a binary from an official source. Suggested, from LuaBinaries' Source Forge repository
+# https://sourceforge.net/projects/luabinaries/files/5.1.5/Tools%20Executables/
+lua_alias="lua5.1"
+"$lua_alias" ./main.lua "$@"
 cd $original_directory
