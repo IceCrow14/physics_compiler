@@ -22,11 +22,13 @@ You can also download the source code and use it in a "portable" fashion, just m
 At the moment, there are no fully stand-alone builds for Linux, though you can set up a working environment easily by following a few steps. You will have to install a Lua 5.1 interpreter, and customize the "launcher" script.
 
 1. Install a Lua 5.1 interpreter
+
 You can achieve this by using your package manager of choice, and installing a Lua 5.1 interpreter package. For instance, in Debian-like distributions (such as Ubuntu) you may use "apt" to install Lua 5.1 as follows:
 ```
 sudo apt install lua5.1
 ```
 2. Customize your launcher script
+
 If you installed Lua 5.1 using the command shown above, then you are all set. Otherwise, you will have to customize the launcher script to point to your Lua 5.1 executable, either by indicating the alias for your Lua executable, or by specifying the path to your Lua 5.1 interpreter.
 
 Inside the "launcher" file, modify the value of the "lua_alias" variable to point to your Lua 5.1 interpreter. For instance:
@@ -65,6 +67,7 @@ launcher
 ```
 
 (TODO)
+
 Once you set up your environment, the next step is to call the launcher script again, and provide the following inputs in order to create a new physics tag:
 * (Optional) Vehicle mass in Halo mass units
 * Vehicle type definition
