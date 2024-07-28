@@ -11,6 +11,8 @@
 -- TODO: add options to restore standard engine and type definitions
 -- TODO: arguments that create new types, modify existing types, and restore original types, etc... Will come later
 
+-- TODO: update README file
+
 -- Lua is smart enough to figure out slashes in imported module paths without human intervention, and also because "generate_path()" cannot be called here
 -- All module paths are relative to the root folder: this application expects the launcher script to change directory into the project folder, regardless of the starting shell location
 local system_utilities = require("./system_utilities")
