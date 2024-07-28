@@ -1,5 +1,5 @@
 # PhyCom (physics_compiler)
-PhyCom (codename for "physics_compiler") is a tool for creating .physics tags for Halo Custom Edition.
+PhyCom (codename for "Physics Compiler") is a tool for creating .physics tags for Halo Custom Edition.
 
 The purpose of this tool is to create physics for custom vehicles made from scratch.
 
@@ -45,7 +45,7 @@ Start by running the launcher script from your terminal of choice.
 
 On the first run, you will be greeted by a warning message, and asked to provide the path to your Halo Custom Edition installation folder, as well as the path to your Invader installation folder.
 
-Don't worry if you make a mistake, if you want to change these paths later by calling the launcher script using option **-s** to start over.
+Don't worry if you make a mistake, if you want to change these paths later, you can do that by calling the launcher script using option **-s** to start over.
 ```
 launcher[.cmd] -s
 ```
@@ -65,4 +65,20 @@ launcher
 ```
 
 (TODO)
-Once you set up your environment, the next step is to provide a valid JMS file containing the collision geometry, and...
+Once you set up your environment, the next step is to call the launcher script again, and provide the following inputs in order to create a new physics tag:
+* (Optional) Vehicle mass in Halo mass units
+* Vehicle type definition
+* Path to a valid JMS file containing the collision geometry, and the mass point spheres of your collision model (relative to "data" folder)
+* Path of the output physics tag (relative to "tags" folder)
+
+```
+launcher[.cmd] [-m <mass>] <type> <jms_path> <physics_path>
+```
+
+For instance:
+```
+launcher "human jeep" vehicles\my_car\physics\my_car.jms vehicles\my_car\my_car.physics
+```
+```
+launcher.cmd -m 9999 "alien fighter" ".\vehicles\my_plane\physics\my_plane.jms" ".\vehicles\my_plane\my_plane.physics"
+```
